@@ -1,0 +1,4 @@
+1: 09:39:22~09:40:00  0분 38초  최대 7014 MiB  (GUARD done rc=134 peak_sum=7014MiB)
+2: 09:45:06~09:45:14  0분 8초  최대 6454 MiB  (GUARD done rc=2 peak_sum=6454MiB)
+3: 09:48:00~09:48:09  0분 9초  최대 7387 MiB  (GUARD done rc=2 peak_sum=7387MiB)
+4: 09:49:30~09:51:04  1분 34초  최대 6804 MiB  (GUARD done rc=0 peak_sum=6804MiB)

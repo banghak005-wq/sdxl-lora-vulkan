@@ -1,0 +1,25 @@
+[I] conv2d direct auto: CPU -> off (no implicit GEMM path) --- conv_direct.cpp:90
+[I] conv3d direct auto: CPU -> off (no implicit GEMM path) --- conv_direct.cpp:90
+[I] Diffusion model weights: 4900.07 MiB --- model_runtime.cpp:483
+[I] flash attention auto: CPU -> on (CPU) --- flash_attn.cpp:70
+[I] Conditioner model weights: 1564.36 MiB --- model_runtime.cpp:483
+[I] Diffusion model weights: 4900.07 MiB --- model_runtime.cpp:483
+[I] apply lora immediately --- lora.cpp:113
+[I] loading 178/2515 tensors from <work>/models/sd_xl_base_1.0.safetensors --- model_loader.cpp:1181
+  |###                                               |   8/178 -   0.00MB/s[K  |##################################################| 178/178 - 828.45MB/s[K
+[I] loading tensors completed, taking 0.27s (read: 0.21s, memcpy: 0.00s, convert: 0.00s, copy_to_backend: 0.00s) --- model_loader.cpp:1451
+[I] loading 374/2515 tensors from <work>/models/sd_xl_base_1.0.safetensors --- model_loader.cpp:1181
+  |##                                                |   8/374 -   0.00MB/s[K  |##########                                        |  73/374 - 642.50MB/s[K  |#################                                 | 122/374 - 696.58MB/s[K  |#######################                           | 171/374 - 718.61MB/s[K  |##############################                    | 221/374 - 738.32MB/s[K  |######################################            | 277/374 - 765.77MB/s[K  |#############################################     | 330/374 - 866.30MB/s[K  |##################################################| 374/374 - 909.56MB/s[K
+[I] loading tensors completed, taking 1.41s (read: 1.38s, memcpy: 0.00s, convert: 0.00s, copy_to_backend: 0.00s) --- model_loader.cpp:1451
+[I] loading 15/2515 tensors from <work>/models/sd_xl_base_1.0.safetensors --- model_loader.cpp:1181
+  |#####################################             | 11/15 -  12.21MB/s[K  |##################################################| 15/15 - 202.30MB/s[K
+[I] loading tensors completed, taking 0.20s (read: 0.02s, memcpy: 0.00s, convert: 0.00s, copy_to_backend: 0.00s) --- model_loader.cpp:1451
+[I] running in eps-prediction mode --- denoising_parameterization.cpp:55
+[I] sampling started: method=euler, steps=1 --- sampling.cpp:60
+[I] loading 1680/2515 tensors from <work>/models/sd_xl_base_1.0.safetensors --- model_loader.cpp:1181
+  |#                                                 |    8/1680 -   0.00MB/s[K  |#######                                           |  223/1680 -   1.21GB/s[K  |#################                                 |  557/1680 -   3.32GB/s[K  |###################                               |  628/1680 -   2.64GB/s[K  |########################                          |  781/1680 -   2.62GB/s[K  |##########################                        |  858/1680 -   2.34GB/s[K  |############################                      |  918/1680 -   2.13GB/s[K  |##############################                    |  989/1680 -   1.99GB/s[K  |################################                  | 1059/1680 -   1.90GB/s[K  |##################################                | 1131/1680 -   1.82GB/s[K  |####################################              | 1209/1680 -   1.78GB/s[K  |######################################            | 1276/1680 -   1.72GB/s[K  |########################################          | 1336/1680 -   1.66GB/s[K  |##########################################        | 1396/1680 -   1.61GB/s[K  |############################################      | 1466/1680 -   1.57GB/s[K  |################################################# | 1624/1680 -   1.57GB/s[K  |##################################################| 1680/1680 -   1.49GB/s[K
+[I] loading tensors completed, taking 3.20s (read: 3.03s, memcpy: 0.00s, convert: 0.00s, copy_to_backend: 0.00s) --- model_loader.cpp:1451
+[I] (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/trainer/ref/test_lora.safetensors --- lora.hpp:1135
+  |==================================================| 1/1 -   9.53s/it[K
+[I] sampling completed, taking 9.53s --- sampling.cpp:99
+GUARD done rc=0 peak_sum=8156MiB

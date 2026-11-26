@@ -1,0 +1,45 @@
+cmake_minimum_required(VERSION 3.19)
+project(sdxl_vulkan_lora VERSION 0.1 LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 패치된 ggml 소스 (patches/get_ggml.sh로 준비: ggml eeda9ec4 + patches/ggml-backward-fixes.patch)
+set(GGML_DIR "" CACHE PATH "patched ggml source directory")
+option(SDXL_VULKAN "Vulkan 백엔드 포함" ON)
+option(SDXL_TESTS  "tinyunet (축소판 UNet PyTorch 대조 검증) 빌드" ON)
+
+if (NOT GGML_DIR OR NOT EXISTS ${GGML_DIR}/CMakeLists.txt)
+    message(FATAL_ERROR "GGML_DIR가 필요함. patches/get_ggml.sh로 받은 뒤 -DGGML_DIR=<폴더>")
+endif()
+
+# 배포용: 정적 링크, 빌드 기계 전용 CPU 최적화 끄기 (계산은 Vulkan이 함)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+set(GGML_VULKAN ${SDXL_VULKAN} CACHE BOOL "" FORCE)
+set(GGML_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(${GGML_DIR} ggml)
+
+# CLI 학습기
+add_executable(sdxl_lora src/cli/sdxl_lora.cpp)
+target_include_directories(sdxl_lora PRIVATE src third_party)
+target_link_libraries(sdxl_lora PRIVATE ggml)
+if (SDXL_VULKAN)
+    target_compile_definitions(sdxl_lora PRIVATE SDXL_VULKAN)
+endif()
+
+# 서버: CLI 학습기를 자식 프로세스로 돌리는 HTTP 작업 관리자 (ggml 불필요)
+find_package(Threads REQUIRED)
+add_executable(sdxl_lora_server src/server/server.cpp)
+target_include_directories(sdxl_lora_server PRIVATE third_party)
+target_link_libraries(sdxl_lora_server PRIVATE Threads::Threads)
+
+if (SDXL_TESTS)
+    add_executable(tinyunet tests/tinyunet.cpp)
+    target_include_directories(tinyunet PRIVATE src)
+    target_link_libraries(tinyunet PRIVATE ggml)
+    if (SDXL_VULKAN)
+        target_compile_definitions(tinyunet PRIVATE SDXL_VULKAN)
+    endif()
+endif()

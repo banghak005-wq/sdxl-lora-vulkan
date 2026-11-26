@@ -1,0 +1,591 @@
+diff --git a/src/ggml-vulkan/ggml-vulkan-push-constants.h b/src/ggml-vulkan/ggml-vulkan-push-constants.h
+index 571411bb..6325d423 100644
+--- a/src/ggml-vulkan/ggml-vulkan-push-constants.h
++++ b/src/ggml-vulkan/ggml-vulkan-push-constants.h
+@@ -643,6 +643,17 @@ struct vk_op_pool1d_push_constants {
+     int32_t p0;
+ };
+ 
++struct vk_op_im2col_back_push_constants {
++    uint32_t IW; uint32_t IH; uint32_t IC;
++    uint32_t OW; uint32_t OH;
++    uint32_t KW; uint32_t KH;
++    uint32_t pelements;
++    uint32_t dst_ofs_n; uint32_t dst_ofs_c;
++    int32_t s0; int32_t s1;
++    int32_t p0; int32_t p1;
++    int32_t d0; int32_t d1;
++};
++
+ struct vk_op_pool2d_push_constants {
+     uint32_t IW; uint32_t IH;
+     uint32_t OW; uint32_t OH;
+diff --git a/src/ggml-vulkan/ggml-vulkan-types.h b/src/ggml-vulkan/ggml-vulkan-types.h
+index 1b533336..e2a096a2 100644
+--- a/src/ggml-vulkan/ggml-vulkan-types.h
++++ b/src/ggml-vulkan/ggml-vulkan-types.h
+@@ -1002,11 +1002,13 @@ struct vk_device_struct {
+     vk_pipeline pipeline_col2im_1d_f16;
+     vk_pipeline pipeline_col2im_1d_bf16;
+     vk_pipeline pipeline_out_prod_f32;
++    vk_pipeline pipeline_out_prod_f16_f32;
+     vk_pipeline pipeline_snake_f32;
+     vk_pipeline pipeline_snake_f16;
+     vk_pipeline pipeline_snake_bf16;
+     vk_pipeline pipeline_pool1d_f32;
+     vk_pipeline pipeline_pool2d_f32;
++    vk_pipeline pipeline_im2col_back_f32;
+     vk_pipeline pipeline_pool2d_subgroup_f32;
+     vk_pipeline pipeline_rwkv_wkv6_f32;
+     vk_pipeline pipeline_rwkv_wkv7_f32;
+diff --git a/src/ggml-vulkan/ggml-vulkan.cpp b/src/ggml-vulkan/ggml-vulkan.cpp
+index 47318cd2..8b743389 100644
+--- a/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -3903,12 +3903,14 @@ void ggml_vk_load_shaders(vk_device& device, vk_pipeline requested) {
+     ggml_vk_create_pipeline(device, device->pipeline_col2im_1d_bf16, "col2im_1d_bf16", col2im_1d_bf16_len, col2im_1d_bf16_data, "main", 2, sizeof(vk_op_col2im_1d_push_constants), {256, 1, 1}, {}, 1, true);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_out_prod_f32, "out_prod_f32", out_prod_f32_len, out_prod_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_out_prod_f16_f32, "out_prod_f16_f32", out_prod_f16_f32_len, out_prod_f16_f32_data, "main", 3, sizeof(vk_op_binary_push_constants), {256, 1, 1}, {}, 1);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_snake_f32,  "snake_f32",  snake_f32_len,  snake_f32_data,  "main", 4, sizeof(vk_op_snake_push_constants), {256, 1, 1}, {}, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_snake_f16,  "snake_f16",  snake_f16_len,  snake_f16_data,  "main", 4, sizeof(vk_op_snake_push_constants), {256, 1, 1}, {}, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_snake_bf16, "snake_bf16", snake_bf16_len, snake_bf16_data, "main", 4, sizeof(vk_op_snake_push_constants), {256, 1, 1}, {}, 1);
+ 
+     ggml_vk_create_pipeline(device, device->pipeline_pool1d_f32, "pool1d_f32", pool1d_f32_len, pool1d_f32_data, "main", 2, sizeof(vk_op_pool1d_push_constants), {512, 1, 1}, {}, 1);
++    ggml_vk_create_pipeline(device, device->pipeline_im2col_back_f32, "im2col_back_f32", im2col_back_f32_len, im2col_back_f32_data, "main", 2, sizeof(vk_op_im2col_back_push_constants), {1, 1, 1}, {512}, 1);
+     ggml_vk_create_pipeline(device, device->pipeline_pool2d_f32, "pool2d_f32", pool2d_f32_len, pool2d_f32_data, "main", 2, sizeof(vk_op_pool2d_push_constants), {1, 1, 1}, {512}, 1);
+     if (device->subgroup_arithmetic && device->subgroup_require_full_support) {
+         ggml_vk_create_pipeline(device, device->pipeline_pool2d_subgroup_f32, "pool2d_subgroup_f32", pool2d_subgroup_f32_len, pool2d_subgroup_f32_data, "main", 2, sizeof(vk_op_pool2d_push_constants), {1, 1, 1}, {128}, 1, false, true, device->subgroup_size);
+@@ -6808,8 +6810,13 @@ static void ggml_vk_mul_mat_q_f16(ggml_backend_vk_context* ctx, vk_context& subc
+ 
+     const bool x_non_contig = (ctx->device->coopmat2 && src0->type == GGML_TYPE_F32) ||
+                               !ggml_vk_dim01_contiguous(src0);
+-    // If src0 is BF16, try to use a BF16 x BF16 multiply
+-    ggml_type f16_type = src0->type == GGML_TYPE_BF16 ? GGML_TYPE_BF16 : GGML_TYPE_F16;
++    // If src0 is BF16, try to use a BF16 x BF16 multiply.
++    // With fp16 disabled, non-contiguous f32 x f32 (e.g. permuted attention Q/K) is staged as f32 instead of
++    // being rounded to f16, so f32 results stay comparable to the CPU backend (needed for gradient checks).
++    const bool keep_f32 = !ctx->device->fp16 && !ctx->device->coopmat2 &&
++                          src0->type == GGML_TYPE_F32 && src1->type == GGML_TYPE_F32 &&
++                          ggml_vk_get_mul_mat_mat_pipeline_map(ctx, GGML_TYPE_F32, GGML_TYPE_F32, ggml_prec_get_acc(dst)) != nullptr;
++    ggml_type f16_type = src0->type == GGML_TYPE_BF16 ? GGML_TYPE_BF16 : (keep_f32 ? GGML_TYPE_F32 : GGML_TYPE_F16);
+ 
+     const bool is_coopmat = ctx->device->coopmat_support || ctx->device->coopmat2;
+     const bool can_quantize_y = (ctx->device->integer_dot_product || ctx->device->coopmat_int_support) &&
+@@ -6858,7 +6865,7 @@ static void ggml_vk_mul_mat_q_f16(ggml_backend_vk_context* ctx, vk_context& subc
+ 
+     const uint64_t qx_sz = ggml_type_size(src0->type) * x_ne / ggml_blck_size(src0->type);
+     const uint64_t qy_sz = ggml_type_size(src1->type) * y_ne / ggml_blck_size(src1->type);
+-    const uint64_t x_sz = !qx_needs_dequant ? qx_sz : sizeof(ggml_fp16_t) * x_ne;
++    const uint64_t x_sz = !qx_needs_dequant ? qx_sz : ggml_type_size(f16_type) * x_ne;
+     const uint64_t y_sz = quantize_y ? (ggml_vk_align_size(y_ne, 128) * ggml_type_size(GGML_TYPE_Q8_1) / ggml_blck_size(GGML_TYPE_Q8_1)) : (y_f32_kernel ? sizeof(float) * y_ne : sizeof(ggml_fp16_t) * y_ne);
+     const uint64_t d_sz = sizeof(float) * d_ne;
+ 
+@@ -9361,6 +9368,9 @@ static vk_pipeline ggml_vk_op_get_pipeline(ggml_backend_vk_context * ctx, const
+         if (src0->type == GGML_TYPE_F32 && src1->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32) {
+             return ctx->device->pipeline_out_prod_f32;
+         }
++        if (src0->type == GGML_TYPE_F16 && src1->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32) {
++            return ctx->device->pipeline_out_prod_f16_f32;
++        }
+         return nullptr;
+     case GGML_OP_CONCAT: {
+         if (!ggml_vk_concat_supported(src0, src1, dst)) {
+@@ -9794,6 +9804,11 @@ static vk_pipeline ggml_vk_op_get_pipeline(ggml_backend_vk_context * ctx, const
+             return ctx->device->pipeline_pool1d_f32;
+         }
+         return nullptr;
++    case GGML_OP_IM2COL_BACK:
++        if (src0->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32) {
++            return ctx->device->pipeline_im2col_back_f32;
++        }
++        return nullptr;
+     case GGML_OP_POOL_2D:
+         if (src0->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32) {
+             // Wide windows use neighboring subgroup lanes to read neighboring inputs.
+@@ -10237,6 +10252,13 @@ static void ggml_vk_op_f32(ggml_backend_vk_context* ctx, vk_context& subctx, con
+             const uint32_t OL = dst->ne[0];
+             elements = { N * OC * OL, 1, 1};
+         } break;
++    case GGML_OP_IM2COL_BACK:
++        {
++            const uint32_t workgroups = CEIL_DIV((uint32_t)ggml_nelements(dst), 512);
++            const uint32_t groups_y = CEIL_DIV(workgroups, ctx->device->properties.limits.maxComputeWorkGroupCount[0]);
++            const uint32_t groups_x = CEIL_DIV(workgroups, groups_y);
++            elements = { groups_x, groups_y, 1 };
++        } break;
+     case GGML_OP_POOL_2D:
+         {
+             const uint32_t outputs = ggml_nelements(dst);
+@@ -12640,6 +12662,35 @@ void ggml_vk_pool_1d(ggml_backend_vk_context * ctx, vk_context& subctx, const gg
+     });
+ }
+ 
++void ggml_vk_im2col_back(ggml_backend_vk_context * ctx, vk_context& subctx, const ggml_tensor * src0, const ggml_tensor * src1, ggml_tensor * dst) {
++    const int32_t s0 = dst->op_params[0];
++    const int32_t s1 = dst->op_params[1];
++    const int32_t p0 = dst->op_params[2];
++    const int32_t p1 = dst->op_params[3];
++    const int32_t d0 = dst->op_params[4];
++    const int32_t d1 = dst->op_params[5];
++    const bool is_2D = dst->op_params[6] == 1;
++
++    const uint32_t IC = is_2D ? dst->ne[2] : dst->ne[1];
++    const uint32_t IH = is_2D ? dst->ne[1] : 1;
++    const uint32_t IW = dst->ne[0];
++    const uint32_t KH = is_2D ? src1->ne[1] : 1;
++    const uint32_t KW = src1->ne[0];
++    const uint32_t OH = is_2D ? src0->ne[2] : 1;
++    const uint32_t OW = src0->ne[1];
++
++    const uint32_t ofs_n = (is_2D ? dst->nb[3] : dst->nb[2]) / sizeof(float);
++    const uint32_t ofs_c = (is_2D ? dst->nb[2] : dst->nb[1]) / sizeof(float);
++
++    ggml_vk_op_f32<vk_op_im2col_back_push_constants>(ctx, subctx, src0, nullptr, nullptr, nullptr, dst, GGML_OP_IM2COL_BACK, {
++        IW, IH, IC, OW, OH, KW, KH,
++        (uint32_t)ggml_nelements(dst),
++        ofs_n, ofs_c,
++        // 1D im2col leaves s1/p1/d1 unset; keep the shader's H-dimension stride test well defined
++        s0, is_2D ? s1 : 1, p0, is_2D ? p1 : 0, d0, is_2D ? d1 : 1,
++    });
++}
++
+ void ggml_vk_pool_2d(ggml_backend_vk_context * ctx, vk_context& subctx, const ggml_tensor * src0, ggml_tensor * dst) {
+     uint32_t op = static_cast<uint32_t>(dst->op_params[0]);
+     const int32_t k1 = dst->op_params[1];
+@@ -13401,6 +13452,10 @@ bool ggml_vk_build_graph(ggml_backend_vk_context * ctx, ggml_cgraph * cgraph, in
+     case GGML_OP_POOL_1D:
+         ggml_vk_pool_1d(ctx, compute_ctx, src0, node);
+ 
++        break;
++    case GGML_OP_IM2COL_BACK:
++        ggml_vk_im2col_back(ctx, compute_ctx, src0, src1, node);
++
+         break;
+     case GGML_OP_POOL_2D:
+         ggml_vk_pool_2d(ctx, compute_ctx, src0, node);
+@@ -17009,8 +17064,9 @@ static bool ggml_backend_vk_device_supports_op(ggml_backend_dev_t dev, const ggm
+         case GGML_OP_OPT_STEP_SGD:
+             return ggml_is_contiguous(op->src[0]) && op->src[0]->type == GGML_TYPE_F32;
+         case GGML_OP_OUT_PROD:
+-            return ggml_is_contiguous(op->src[0]) && op->src[0]->type == GGML_TYPE_F32
+-                && ggml_is_contiguous(op->src[1]) && op->src[1]->type == GGML_TYPE_F32
++            // shader indexes all operands through strides -> non-contiguous inputs are fine
++            return (op->src[0]->type == GGML_TYPE_F32 || op->src[0]->type == GGML_TYPE_F16)
++                && op->src[1]->type == GGML_TYPE_F32
+                 && op->type == GGML_TYPE_F32;
+         case GGML_OP_LOG:
+         case GGML_OP_TRI:
+@@ -17159,6 +17215,9 @@ static bool ggml_backend_vk_device_supports_op(ggml_backend_dev_t dev, const ggm
+                 && op->src[1]->type == GGML_TYPE_F32;
+         case GGML_OP_POOL_1D:
+             return ggml_is_contiguous(op->src[0]) && op->src[0]->type == GGML_TYPE_F32;
++        case GGML_OP_IM2COL_BACK:
++            return ggml_is_contiguous(op->src[0]) && op->src[0]->type == GGML_TYPE_F32
++                && ggml_is_contiguous(op) && op->type == GGML_TYPE_F32;
+         case GGML_OP_POOL_2D:
+             return ggml_is_contiguous(op->src[0]) && op->src[0]->type == GGML_TYPE_F32;
+         case GGML_OP_RWKV_WKV6:
+diff --git a/src/ggml-vulkan/vulkan-shaders/im2col_back.comp b/src/ggml-vulkan/vulkan-shaders/im2col_back.comp
+new file mode 100644
+index 00000000..26468f2c
+--- /dev/null
++++ b/src/ggml-vulkan/vulkan-shaders/im2col_back.comp
+@@ -0,0 +1,67 @@
++#version 450
++
++#include "types.glsl"
++
++// Gradient of im2col: sums the im2col-shaped gradient [N, OH, OW, IC*KH*KW]
++// back into the input layout [N, IC, IH, IW]. One invocation per input element.
++layout(push_constant) uniform parameter {
++    uint IW; uint IH; uint IC;
++    uint OW; uint OH;
++    uint KW; uint KH;
++    uint pelements;
++    uint dst_ofs_n; uint dst_ofs_c;
++    int s0; int s1;
++    int p0; int p1;
++    int d0; int d1;
++} p;
++
++layout(constant_id = 0) const uint BLOCK_SIZE = 512;
++
++layout (local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
++
++layout(binding = 0) readonly buffer X {float data_a[];};
++layout(binding = 1) writeonly buffer D {float data_d[];};
++
++void main() {
++    const uint workgroup = gl_WorkGroupID.y * gl_NumWorkGroups.x + gl_WorkGroupID.x;
++    const uint idx = workgroup * BLOCK_SIZE + gl_LocalInvocationID.x;
++    if (idx >= p.pelements) {
++        return;
++    }
++
++    const uint iiw = idx % p.IW;
++    uint tmp = idx / p.IW;
++    const uint iih = tmp % p.IH; tmp /= p.IH;
++    const uint iic = tmp % p.IC;
++    const uint in_ = tmp / p.IC;
++
++    const uint CHW = p.IC * p.KH * p.KW;
++
++    float grad = 0.0f;
++    for (uint ikh = 0; ikh < p.KH; ikh++) {
++        // GLSL leaves % of negative ints undefined, so reject negatives before the stride test
++        const int tmph = int(iih) + p.p1 - int(ikh) * p.d1;
++        if (tmph < 0 || (tmph % p.s1) != 0) {
++            continue;
++        }
++        const int ioh = tmph / p.s1;
++        if (ioh >= int(p.OH)) {
++            continue;
++        }
++        for (uint ikw = 0; ikw < p.KW; ikw++) {
++            const int tmpw = int(iiw) + p.p0 - int(ikw) * p.d0;
++            if (tmpw < 0 || (tmpw % p.s0) != 0) {
++                continue;
++            }
++            const int iow = tmpw / p.s0;
++            if (iow >= int(p.OW)) {
++                continue;
++            }
++            const uint src = ((in_ * p.OH + uint(ioh)) * p.OW + uint(iow)) * CHW
++                           + iic * (p.KH * p.KW) + ikh * p.KW + ikw;
++            grad += data_a[src];
++        }
++    }
++
++    data_d[in_ * p.dst_ofs_n + iic * p.dst_ofs_c + iih * p.IW + iiw] = grad;
++}
+diff --git a/src/ggml-vulkan/vulkan-shaders/out_prod.comp b/src/ggml-vulkan/vulkan-shaders/out_prod.comp
+index 19731699..e112945d 100644
+--- a/src/ggml-vulkan/vulkan-shaders/out_prod.comp
++++ b/src/ggml-vulkan/vulkan-shaders/out_prod.comp
+@@ -1,6 +1,11 @@
+ #version 450
+ 
+ #extension GL_EXT_shader_16bit_storage : require
++#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
++
++#ifndef A_TYPE
++#define A_TYPE float
++#endif
+ 
+ layout (push_constant) uniform parameter
+ {
+@@ -12,7 +17,7 @@ layout (push_constant) uniform parameter
+     float param1; float param2; int param3;
+ } p;
+ 
+-layout (binding = 0) readonly buffer A {float data_a[];};
++layout (binding = 0) readonly buffer A {A_TYPE data_a[];};
+ layout (binding = 1) readonly buffer B {float data_b[];};
+ layout (binding = 2) writeonly buffer D {float data_d[];};
+ 
+@@ -51,7 +56,7 @@ void main() {
+     for (uint k = 0; k < K; k++) {
+         uint aoff = get_aoffset() + a_i3*p.nb03 + a_i2*p.nb02 + k*p.nb01 + a_i0*p.nb00;
+         uint boff = get_boffset() + b_i3*p.nb13 + b_i2*p.nb12 + k*p.nb11 + b_i0*p.nb10;
+-        sum += data_a[aoff] * data_b[boff];
++        sum += float(data_a[aoff]) * data_b[boff];
+     }
+ 
+     uint doff = get_doffset() + i3*p.nb23 + i2*p.nb22 + i1*p.nb21 + i0*p.nb20;
+diff --git a/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp b/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp
+index 00304e51..fa538ec0 100644
+--- a/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp
++++ b/src/ggml-vulkan/vulkan-shaders/vulkan-shaders-gen.cpp
+@@ -1159,6 +1159,7 @@ void process_shaders() {
+     }
+ 
+     string_to_spv("out_prod_f32", "out_prod.comp", {});
++    string_to_spv("out_prod_f16_f32", "out_prod.comp", {{"A_TYPE", "float16_t"}});
+ 
+     string_to_spv("timestep_embedding_f32", "timestep_embedding.comp", merge_maps(base_dict, {{"A_TYPE", "float"}, {"D_TYPE", "float"}}));
+ 
+@@ -1172,6 +1173,7 @@ void process_shaders() {
+     string_to_spv("snake_bf16", "snake.comp", {{"DATA_A_BF16", "1"}, {"DATA_D_BF16", "1"}, {"A_TYPE", "uint16_t"},  {"D_TYPE", "uint16_t"}});
+ 
+     string_to_spv("pool1d_f32", "pool1d.comp", merge_maps(base_dict, {{"A_TYPE", "float"}, {"D_TYPE", "float"}}));
++    string_to_spv("im2col_back_f32", "im2col_back.comp", base_dict);
+     string_to_spv("pool2d_f32", "pool2d.comp", merge_maps(base_dict, {{"A_TYPE", "float"}, {"D_TYPE", "float"}}));
+     string_to_spv("pool2d_subgroup_f32", "pool2d.comp", merge_maps(base_dict, {{"A_TYPE", "float"}, {"D_TYPE", "float"}, {"USE_SUBGROUP", "1"}}));
+ 
+diff --git a/src/ggml.c b/src/ggml.c
+index d2e77fe3..b8ec5737 100644
+--- a/src/ggml.c
++++ b/src/ggml.c
+@@ -6725,6 +6725,36 @@ static void ggml_sub_or_set(
+     ggml_build_forward_expand(cgraph, cgraph->grads[isrc]);
+ }
+ 
++// Backward helpers for ops whose gradient is assembled from existing forward ops inside the backward graph.
++// Only the op's input is kept from the forward pass; intermediates below live only in the backward graph.
++
++// d/dx of y = (x - mean(x)) / sqrt(var(x) + eps), rows along ne0
++static struct ggml_tensor * ggml_norm_rows_back(struct ggml_context * ctx, struct ggml_tensor * x, struct ggml_tensor * g, float eps) {
++    struct ggml_tensor * xc  = ggml_sub(ctx, x, ggml_mean(ctx, x));
++    struct ggml_tensor * sd  = ggml_sqrt(ctx, ggml_scale_bias(ctx, ggml_mean(ctx, ggml_sqr(ctx, xc)), 1.0f, eps));
++    struct ggml_tensor * y   = ggml_div(ctx, xc, sd);
++    struct ggml_tensor * mg  = ggml_mean(ctx, g);
++    struct ggml_tensor * mgy = ggml_mean(ctx, ggml_mul(ctx, g, y));
++    return ggml_div(ctx, ggml_sub(ctx, ggml_sub(ctx, g, mg), ggml_mul(ctx, y, mgy)), sd);
++}
++
++// tanh-approximated GELU and its derivative, written with sigmoid so large |a| cannot overflow:
++// gelu(a) = a * s, s = sigmoid(2u), u = k (a + 0.044715 a^3), k = sqrt(2/pi)
++// gelu'(a) = s + a * 2 s (1 - s) * k (1 + 3 * 0.044715 a^2)
++static struct ggml_tensor * ggml_gelu_tanh_sigmoid(struct ggml_context * ctx, struct ggml_tensor * a) {
++    const float k = 0.7978845608028654f;
++    struct ggml_tensor * u = ggml_scale(ctx, ggml_mul(ctx, a, ggml_scale_bias(ctx, ggml_sqr(ctx, a), 0.044715f, 1.0f)), 2.0f * k);
++    return ggml_sigmoid(ctx, u);
++}
++
++static struct ggml_tensor * ggml_gelu_tanh_grad(struct ggml_context * ctx, struct ggml_tensor * a) {
++    const float k = 0.7978845608028654f;
++    struct ggml_tensor * sg  = ggml_gelu_tanh_sigmoid(ctx, a);
++    struct ggml_tensor * ds  = ggml_mul(ctx, sg, ggml_scale_bias(ctx, sg, -1.0f, 1.0f));                // s (1 - s)
++    struct ggml_tensor * du  = ggml_scale_bias(ctx, ggml_sqr(ctx, a), 2.0f * k * 3.0f * 0.044715f, 2.0f * k);  // 2 du/da
++    return ggml_add(ctx, sg, ggml_mul(ctx, a, ggml_mul(ctx, ds, du)));
++}
++
+ static void ggml_compute_backward(
+         struct ggml_context * ctx, struct ggml_cgraph * cgraph, int i, const bool * grads_needed) {
+     struct ggml_tensor * tensor = cgraph->nodes[i];
+@@ -6785,7 +6815,11 @@ static void ggml_compute_backward(
+                 ggml_add_or_set(ctx, cgraph, isrc0, grad);
+             }
+             if (src1_needs_grads) {
+-                ggml_sub_or_set(ctx, cgraph, isrc1, grad);
++                struct ggml_tensor * tmp = grad;
++                if (!ggml_are_same_shape(src0, src1)) {
++                    tmp = ggml_repeat_back(ctx, tmp, src1);
++                }
++                ggml_sub_or_set(ctx, cgraph, isrc1, tmp);
+             }
+         } break;
+         case GGML_OP_MUL: {
+@@ -6805,7 +6839,11 @@ static void ggml_compute_backward(
+                 ggml_add_or_set(ctx, cgraph, isrc0, ggml_div(ctx, grad, src1));
+             }
+             if (src1_needs_grads) {
+-                ggml_sub_or_set(ctx, cgraph, isrc1, ggml_mul(ctx, grad, ggml_div(ctx, tensor, src1)));
++                struct ggml_tensor * tmp = ggml_mul(ctx, grad, ggml_div(ctx, tensor, src1));
++                if (!ggml_are_same_shape(src0, src1)) {
++                    tmp = ggml_repeat_back(ctx, tmp, src1);
++                }
++                ggml_sub_or_set(ctx, cgraph, isrc1, tmp);
+             }
+         } break;
+         case GGML_OP_SQR: {
+@@ -6881,13 +6919,16 @@ static void ggml_compute_backward(
+             // src0.shape   [n,m,q1,r1]
+             // src1.shape   [n,p,qq,rr]
+ 
++            // Both gradients are expressed as MUL_MAT of transposed copies instead of OUT_PROD:
++            // backends (Vulkan) have tuned matmul kernels but only a naive OUT_PROD, which made
++            // SDXL LoRA backward ~15x slower than forward. Same math, f32 accumulation.
+             if (src0_needs_grads) {
+                 GGML_ASSERT(grad->ne[2] == src1->ne[2]);
+                 GGML_ASSERT(grad->ne[3] == src1->ne[3]);
+                 struct ggml_tensor * tmp =
+-                    ggml_out_prod(ctx, // [n,m,qq,rr]
+-                        src1,          // [n,p,qq,rr]
+-                        grad);         // [m,p,qq,rr]
++                    ggml_mul_mat(ctx,                                  // [n,m,qq,rr]
++                        ggml_cont(ctx, ggml_transpose(ctx, src1)),     // [p,n,qq,rr]
++                        ggml_cont(ctx, ggml_transpose(ctx, grad)));    // [p,m,qq,rr]
+                 if (!ggml_are_same_shape(tmp, src0)) {
+                     GGML_ASSERT(tmp->ne[0] == src0->ne[0]);
+                     GGML_ASSERT(tmp->ne[1] == src0->ne[1]);
+@@ -6904,18 +6945,9 @@ static void ggml_compute_backward(
+             }
+             if (src1_needs_grads) {
+                 ggml_add_or_set(ctx, cgraph, isrc1,
+-                        // ggml_mul_mat(ctx,                   // [n,p,qq,rr]
+-                        //     ggml_cont(ctx,                  // [m,n,q1,r1]
+-                        //         ggml_transpose(ctx, src0)), // [m,n,q1,r1]
+-                        //     grad),                          // [m,p,qq,rr]
+-
+-                        // when src0 is bigger than tensor->grad (this is mostly the case in llama),
+-                        // avoid transpose of src0, rather transpose smaller tensor->grad
+-                        // and then use ggml_out_prod
+-                        ggml_out_prod(ctx,      // [n,p,qq,rr]
+-                            src0,               // [n,m,q1,r1]
+-                            ggml_transpose(ctx, // [p,m,qq,rr]
+-                                grad)));        // [m,p,qq,rr]
++                        ggml_mul_mat(ctx,                              // [n,p,qq,rr]
++                            ggml_cont(ctx, ggml_transpose(ctx, src0)), // [m,n,q1,r1]
++                            grad));                                    // [m,p,qq,rr]
+             }
+         } break;
+         case GGML_OP_SCALE: {
+@@ -7019,12 +7051,13 @@ static void ggml_compute_backward(
+                 axb[axis1] = 1;
+                 axb[axis2] = 2;
+                 axb[axis3] = 3;
+-                ggml_add_or_set(ctx, cgraph, isrc0, ggml_permute(ctx, grad, axb[0], axb[1], axb[2], axb[3]));
++                // cont: 연속되지 않은 그래디언트가 이항 연산 역전파로 흘러가면 CPU에서 nb00 assert
++                ggml_add_or_set(ctx, cgraph, isrc0, ggml_cont(ctx, ggml_permute(ctx, grad, axb[0], axb[1], axb[2], axb[3])));
+             }
+         } break;
+         case GGML_OP_TRANSPOSE: {
+             if (src0_needs_grads) {
+-                ggml_add_or_set(ctx, cgraph, isrc0, ggml_transpose(ctx, grad));
++                ggml_add_or_set(ctx, cgraph, isrc0, ggml_cont(ctx, ggml_transpose(ctx, grad)));
+             }
+         } break;
+         case GGML_OP_GET_ROWS: {
+@@ -7174,11 +7207,71 @@ static void ggml_compute_backward(
+                         ggml_add_or_set(ctx, cgraph, isrc1, ggml_mul(ctx, ggml_silu(ctx, src0), grad));
+                     }
+                 } break;
++                case GGML_GLU_OP_GEGLU: {
++                    // split form only: out = gelu(a) * b  (swapped: gelu(b) * a)
++                    GGML_ASSERT(src1 && "backward pass only implemented for split geglu");
++                    const bool swapped = ggml_get_op_params_i32(tensor, 1) != 0;
++                    struct ggml_tensor * a  = swapped ? src1 : src0;   // gelu input
++                    struct ggml_tensor * b  = swapped ? src0 : src1;   // linear half
++                    const int            ia = swapped ? isrc1 : isrc0;
++                    const int            ib = swapped ? isrc0 : isrc1;
++                    const bool           na = swapped ? src1_needs_grads : src0_needs_grads;
++                    const bool           nb = swapped ? src0_needs_grads : src1_needs_grads;
++                    if (na) {
++                        ggml_add_or_set(ctx, cgraph, ia, ggml_mul(ctx, ggml_mul(ctx, grad, b), ggml_gelu_tanh_grad(ctx, a)));
++                    }
++                    if (nb) {
++                        ggml_add_or_set(ctx, cgraph, ib, ggml_mul(ctx, grad, ggml_mul(ctx, a, ggml_gelu_tanh_sigmoid(ctx, a))));
++                    }
++                } break;
+                 default: {
+                     GGML_ABORT("unsupported glu op for backward pass: %s", ggml_glu_op_name(ggml_get_glu_op(tensor)));
+                 } //break;
+             }
+         } break;
++        case GGML_OP_NORM: {
++            if (src0_needs_grads) {
++                float eps;
++                memcpy(&eps, tensor->op_params, sizeof(float));
++                ggml_add_or_set(ctx, cgraph, isrc0, ggml_norm_rows_back(ctx, ggml_cont(ctx, src0), ggml_cont(ctx, grad), eps));
++            }
++        } break;
++        case GGML_OP_GROUP_NORM: {
++            if (src0_needs_grads) {
++                const int32_t G   = ggml_get_op_params_i32(tensor, 0);
++                const float   eps = ggml_get_op_params_f32(tensor, 1);
++                GGML_ASSERT(src0->ne[2] % G == 0);
++                const int64_t n_row = src0->ne[0] * src0->ne[1] * (src0->ne[2] / G);
++                const int64_t rows  = G * src0->ne[3];
++                struct ggml_tensor * x2 = ggml_reshape_2d(ctx, ggml_cont(ctx, src0), n_row, rows);
++                struct ggml_tensor * g2 = ggml_reshape_2d(ctx, ggml_cont(ctx, grad), n_row, rows);
++                ggml_add_or_set(ctx, cgraph, isrc0, ggml_reshape_4d(ctx, ggml_norm_rows_back(ctx, x2, g2, eps),
++                    src0->ne[0], src0->ne[1], src0->ne[2], src0->ne[3]));
++            }
++        } break;
++        case GGML_OP_CONCAT: {
++            const int32_t dim = ggml_get_op_params_i32(tensor, 0);
++            size_t off1 = src0->ne[dim] * grad->nb[dim];
++            if (src0_needs_grads) {
++                ggml_add_or_set(ctx, cgraph, isrc0, ggml_cont(ctx, ggml_view_4d(ctx, grad,
++                    src0->ne[0], src0->ne[1], src0->ne[2], src0->ne[3], grad->nb[1], grad->nb[2], grad->nb[3], 0)));
++            }
++            if (src1_needs_grads) {
++                ggml_add_or_set(ctx, cgraph, isrc1, ggml_cont(ctx, ggml_view_4d(ctx, grad,
++                    src1->ne[0], src1->ne[1], src1->ne[2], src1->ne[3], grad->nb[1], grad->nb[2], grad->nb[3], off1)));
++            }
++        } break;
++        case GGML_OP_UPSCALE: {
++            if (src0_needs_grads) {
++                const int32_t mode = ggml_get_op_params_i32(tensor, 0);
++                GGML_ASSERT((mode & 0xFF) == GGML_SCALE_MODE_NEAREST && "upscale backward: only nearest");
++                GGML_ASSERT(tensor->ne[0] == 2*src0->ne[0] && tensor->ne[1] == 2*src0->ne[1] &&
++                            tensor->ne[2] == src0->ne[2] && tensor->ne[3] == src0->ne[3] && "upscale backward: only 2x in W,H");
++                // each input pixel was copied to a 2x2 block -> its gradient is the block sum
++                ggml_add_or_set(ctx, cgraph, isrc0,
++                    ggml_scale(ctx, ggml_pool_2d(ctx, ggml_cont(ctx, grad), GGML_OP_POOL_AVG, 2, 2, 2, 2, 0, 0), 4.0f));
++            }
++        } break;
+         case GGML_OP_NONE: {
+             // noop
+         } break;
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+index 62aef587..0c6751c6 100644
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -6085,6 +6085,49 @@ struct test_mul_mat_id_shared : public test_case {
+ };
+ 
+ // GGML_OP_OUT_PROD
++// GGML_OP_IM2COL_BACK
++struct test_im2col_back : public test_case {
++    const ggml_type type_kernel;
++    const std::array<int64_t, 4> ne_input; // [IW, IH, IC, N] (2D) or [IW, IC, N, 1] (1D)
++    const std::array<int64_t, 4> ne_kernel;
++    const int s0, s1, p0, p1, d0, d1;
++    const bool is_2D;
++
++    std::string vars() override {
++        return VARS_TO_STR10(type_kernel, ne_input, ne_kernel, s0, s1, p0, p1, d0, d1, is_2D);
++    }
++
++    test_im2col_back(ggml_type type_kernel = GGML_TYPE_F16,
++            std::array<int64_t, 4> ne_input = {10, 10, 3, 1},
++            std::array<int64_t, 4> ne_kernel = {3, 3, 3, 1},
++            int s0 = 1, int s1 = 1, int p0 = 1, int p1 = 1, int d0 = 1, int d1 = 1, bool is_2D = true)
++        : type_kernel(type_kernel), ne_input(ne_input), ne_kernel(ne_kernel),
++          s0(s0), s1(s1), p0(p0), p1(p1), d0(d0), d1(d1), is_2D(is_2D) {}
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        const int64_t KW = ne_kernel[0];
++        const int64_t KH = is_2D ? ne_kernel[1] : 1;
++        const int64_t IC = is_2D ? ne_input[2] : ne_input[1];
++        const int64_t N  = is_2D ? ne_input[3] : ne_input[2];
++        const int64_t OW = (ne_input[0] + 2*p0 - d0*(KW - 1) - 1)/s0 + 1;
++        const int64_t OH = is_2D ? (ne_input[1] + 2*p1 - d1*(KH - 1) - 1)/s1 + 1 : 1;
++
++        ggml_tensor * kernel = ggml_new_tensor(ctx, type_kernel, 4, ne_kernel.data());
++        ggml_set_name(kernel, "kernel");
++
++        ggml_tensor * grad = is_2D
++            ? ggml_new_tensor_4d(ctx, GGML_TYPE_F32, IC*KH*KW, OW, OH, N)
++            : ggml_new_tensor_3d(ctx, GGML_TYPE_F32, IC*KW, OW, N);
++        ggml_set_name(grad, "grad");
++
++        int64_t ne[4] = { ne_input[0], ne_input[1], ne_input[2], ne_input[3] };
++        ggml_tensor * out = ggml_im2col_back(ctx, grad, kernel, ne, s0, s1, p0, p1, d0, d1, is_2D);
++        ggml_set_name(out, "out");
++
++        return out;
++    }
++};
++
+ struct test_out_prod : public test_case {
+     const ggml_type type_a;
+     const ggml_type type_b;
+@@ -12343,6 +12386,23 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
+                                                   256, 16, 16, {ne2, 1}, {1, 1}));
+     }
+ 
++    // im2col backward, shapes of SDXL convolutions (3x3 s1/s2, 1x1) plus dilation and 1D
++    test_cases.emplace_back(new test_im2col_back());
++    test_cases.emplace_back(new test_im2col_back(GGML_TYPE_F16, {16, 16, 32, 2}, {3, 3, 32, 64}, 1, 1, 1, 1, 1, 1, true));
++    test_cases.emplace_back(new test_im2col_back(GGML_TYPE_F16, {16, 16, 32, 1}, {3, 3, 32, 32}, 2, 2, 1, 1, 1, 1, true));
++    test_cases.emplace_back(new test_im2col_back(GGML_TYPE_F32, {15, 13, 8, 1},  {3, 3, 8, 8},   2, 2, 1, 1, 1, 1, true));
++    test_cases.emplace_back(new test_im2col_back(GGML_TYPE_F16, {16, 16, 64, 1}, {1, 1, 64, 32}, 1, 1, 0, 0, 1, 1, true));
++    test_cases.emplace_back(new test_im2col_back(GGML_TYPE_F32, {20, 18, 4, 2},  {3, 3, 4, 4},   1, 1, 2, 2, 2, 2, true));
++    test_cases.emplace_back(new test_im2col_back(GGML_TYPE_F32, {64, 320, 1, 1}, {3, 320, 640, 1}, 1, 0, 1, 0, 1, 0, false));
++    test_cases.emplace_back(new test_im2col_back(GGML_TYPE_F16, {64, 64, 320, 1}, {3, 3, 320, 320}, 1, 1, 1, 1, 1, 1, true));
++
++    // non-contiguous (transposed) src1, f32/f16 src0: this is what MUL_MAT backward produces
++    for (ggml_type ta : {GGML_TYPE_F32, GGML_TYPE_F16}) {
++        test_cases.emplace_back(new test_out_prod(ta, GGML_TYPE_F32, 64, 48, 32, {1, 1}, {1, 1}, true));
++        test_cases.emplace_back(new test_out_prod(ta, GGML_TYPE_F32, 256, 16, 77, {3, 2}, {2, 1}, true));
++        test_cases.emplace_back(new test_out_prod(ta, GGML_TYPE_F32, 320, 640, 256, {1, 1}, {1, 1}, true));
++    }
++
+     // nr2 sweep to cover the cublasSgemmBatched pointer-array path (dps2 > 1)
+     for (int64_t nr2 : {8, 16, 32}) {
+         test_cases.emplace_back(new test_out_prod(GGML_TYPE_F32, GGML_TYPE_F32,

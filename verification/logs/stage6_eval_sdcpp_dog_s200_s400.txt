@@ -1,0 +1,16 @@
+있음: out/eval/base_p0_768_s42.png
+== lora: a photo of sks dog -> out/eval/dog_lora_s200_p0_lora_768_s42.png
+[I] (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/out/dog_lora_s200.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=9896MiB
+있음: out/eval/base_p1_768_s42.png
+== lora: a photo of sks dog in a bucket -> out/eval/dog_lora_s200_p1_lora_768_s42.png
+[I] (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/out/dog_lora_s200.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=9874MiB
+있음: out/eval/base_p0_768_s42.png
+== lora: a photo of sks dog -> out/eval/dog_lora_s400_p0_lora_768_s42.png
+[I] (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/out/dog_lora_s400.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=9858MiB
+있음: out/eval/base_p1_768_s42.png
+== lora: a photo of sks dog in a bucket -> out/eval/dog_lora_s400_p1_lora_768_s42.png
+[I] (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/out/dog_lora_s400.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=9912MiB

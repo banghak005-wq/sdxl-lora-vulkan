@@ -1,0 +1,46 @@
+# tinyunet (Vulkan, GGML_VK_DISABLE_F16=1) vs PyTorch float64 — 2026-11-26
+== tiny8 
+backend=vulkan conv=f32 native=[] nodes: fwd=1292 total=2992
+out  rel_l2=2.464e-06
+loss ggml=1.369818 ref=1.369819 rel=2.611e-07
+lora grads: 64 tensors, overall rel_l2=3.512e-06, worst=8.391e-06 (lora.mb.1.tb0.attn1.to_q.ld)
+PASS
+== tiny8 --native norm,gn,concat,upscale
+backend=vulkan conv=f32 native=[concat gn norm upscale ] nodes: fwd=884 total=2541
+out  rel_l2=2.496e-06
+loss ggml=1.369818 ref=1.369819 rel=3.481e-07
+lora grads: 64 tensors, overall rel_l2=3.350e-06, worst=7.995e-06 (lora.mb.1.tb0.attn1.to_q.ld)
+PASS
+== tiny8 --native all
+backend=vulkan conv=f32 native=[all ] nodes: fwd=856 total=2529
+out  rel_l2=2.451e-06
+loss ggml=1.369818 ref=1.369819 rel=2.611e-07
+lora grads: 64 tensors, overall rel_l2=3.430e-06, worst=8.395e-06 (lora.mb.1.tb0.attn1.to_q.ld)
+PASS
+== tiny16 
+backend=vulkan conv=f32 native=[] nodes: fwd=1292 total=2992
+out  rel_l2=2.128e-06
+loss ggml=1.367515 ref=1.367515 rel=1.743e-07
+lora grads: 64 tensors, overall rel_l2=3.055e-06, worst=6.246e-06 (lora.ob.0.1.tb0.attn2.to_k.ld)
+PASS
+== tiny16 --native norm,gn,concat,upscale
+backend=vulkan conv=f32 native=[concat gn norm upscale ] nodes: fwd=884 total=2541
+out  rel_l2=2.164e-06
+loss ggml=1.367515 ref=1.367515 rel=1.743e-07
+lora grads: 64 tensors, overall rel_l2=3.161e-06, worst=6.867e-06 (lora.ib.3.1.tb0.attn1.to_v.ld)
+PASS
+== tiny16 --native all
+backend=vulkan conv=f32 native=[all ] nodes: fwd=856 total=2529
+out  rel_l2=2.171e-06
+loss ggml=1.367515 ref=1.367515 rel=2.615e-07
+lora grads: 64 tensors, overall rel_l2=3.189e-06, worst=6.757e-06 (lora.ib.3.1.tb0.attn1.to_v.ld)
+PASS
+# 참고: fp16 행렬곱 켠 상태 (GGML_VK_DISABLE_F16 없음)
+== tiny8 --native all (fp16)
+out  rel_l2=1.601e-03
+lora grads: 64 tensors, overall rel_l2=2.849e-03, worst=6.019e-03 (lora.mb.1.tb0.attn1.to_out.0.ld)
+PASS
+== tiny16 --native all (fp16)
+out  rel_l2=1.023e-03
+lora grads: 64 tensors, overall rel_l2=9.584e-04, worst=2.490e-03 (lora.ob.1.1.tb0.attn1.to_q.lu)
+PASS

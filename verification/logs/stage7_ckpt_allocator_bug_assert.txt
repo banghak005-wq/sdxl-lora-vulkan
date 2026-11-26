@@ -1,0 +1,42 @@
+ggml_vulkan: Found 1 Vulkan devices:
+ggml_vulkan: 0 = AMD Radeon Graphics (RADV REMBRANDT) (radv) | uma: 1 | rebar: 1 | fp16: 0 | bf16: 0 | fp4: 0 | warp size: 32 | shared memory: 65536 | int dot: 1 | matrix cores: none
+[ckpt] 샘플 5개, 잠재값 96x96 (768px)
+UNet 가중치: 1680개, 4900.1 MiB (Vulkan0)
+가중치 로드 6.7s
+LoRA: 모듈 560개, rank 8, 파라미터 11.61M
+[ckpt] 블록 20개, 블록 출력+기울기 저장 284.1 MiB, 영구 버퍼 329.3 MiB
+[ckpt] 역전파 블록 16개 (LoRA 없는 앞 블록은 생략), 지원 안 되는 노드 0
+step    1  t=558  loss 0.03848  ema 0.03848  29.32s (fwd 8.14 bwd 21.11)  buf 1227 MiB  GTT 5525 MiB  [alvan-nee-brFsZ7qszSY-unsplash]
+<work>/sd.cpp/ggml/.claude/worktrees/stage5-vk-backward/src/ggml-vulkan/ggml-vulkan.cpp:6932: GGML_ASSERT(d_D->size >= d_buf_offset + d_sz) failed
+[New LWP 243004]
+[New LWP 243003]
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+0x00007828c64a672e in ?? () from /lib/x86_64-linux-gnu/libc.so.6
+#0  0x00007828c64a672e in ?? () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x00007828c649b388 in ?? () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x00007828c649b3cd in ?? () from /lib/x86_64-linux-gnu/libc.so.6
+#3  0x00007828c6506507 in wait4 () from /lib/x86_64-linux-gnu/libc.so.6
+#4  0x00007828c696fa2b in ggml_print_backtrace () at <work>/sd.cpp/ggml/.claude/worktrees/stage5-vk-backward/src/ggml.c:235
+235	        waitpid(child_pid, NULL, 0);
+#5  0x00007828c696fb7e in ggml_abort (file=0x7828c6b410f0 "<work>/sd.cpp/ggml/.claude/worktrees/stage5-vk-backward/src/ggml-vulkan/ggml-vulkan.cpp", line=6932, fmt=0x7828c6b3a01e "GGML_ASSERT(%s) failed") at <work>/sd.cpp/ggml/.claude/worktrees/stage5-vk-backward/src/ggml.c:269
+269	        ggml_print_backtrace();
+#6  0x00007828c6ad8faf in ggml_vk_mul_mat_q_f16 (ctx=ctx@entry=0x6381d8cff400, subctx=std::shared_ptr<vk_context_struct> (use count 2, weak count 24) = {...}, src0=src0@entry=0x7828acd06bf0, src1=src1@entry=0x7828acd06910, dst=dst@entry=0x7828acd071b0, disable_split_k=disable_split_k@entry=false, prepare_y=...) at <work>/sd.cpp/ggml/.claude/worktrees/stage5-vk-backward/src/ggml-vulkan/ggml-vulkan.cpp:6932
+6932	    GGML_ASSERT(d_D->size >= d_buf_offset + d_sz);
+#7  0x00007828c6ad927b in ggml_vk_mul_mat (ctx=0x6381d8cff400, subctx=std::shared_ptr<vk_context_struct> (use count 2, weak count 24) = {...}, cgraph=<optimized out>, node_idx=<optimized out>) at <work>/sd.cpp/ggml/.claude/worktrees/stage5-vk-backward/src/ggml-vulkan/ggml-vulkan.cpp:7812
+7812	        ggml_vk_mul_mat_q_f16(ctx, subctx, src0, src1, dst, false);
+#8  0x00007828c6b08705 in ggml_vk_build_graph (ctx=0x6381d8cff400, cgraph=0x7828acf56d10, node_idx=node_idx@entry=224, node_begin=0x7828acd04240, node_idx_begin=node_idx_begin@entry=185, last_node=false, almost_ready=false, submit=false) at <work>/sd.cpp/ggml/.claude/worktrees/stage5-vk-backward/src/ggml-vulkan/ggml-vulkan.cpp:13482
+13482	        ggml_vk_mul_mat(ctx, compute_ctx, cgraph, node_idx);
+#9  0x00007828c6b0912e in ggml_backend_vk_graph_compute (backend=<optimized out>, cgraph=<optimized out>) at <work>/sd.cpp/ggml/.claude/worktrees/stage5-vk-backward/src/ggml-vulkan/ggml-vulkan.cpp:15787
+15787	        bool enqueued = ggml_vk_build_graph(ctx, cgraph, i, cgraph->nodes[submit_node_idx], submit_node_idx, last_in_graph, almost_ready, submit);
+#10 0x00007828c6983c1e in ggml_backend_graph_compute (backend=0x6381d8d002c0, cgraph=<optimized out>) at <work>/sd.cpp/ggml/.claude/worktrees/stage5-vk-backward/src/ggml-backend.cpp:802
+802	    enum ggml_status err = ggml_backend_graph_compute_async(backend, cgraph);
+#11 0x00006381ab937193 in operator() (__closure=__closure@entry=0x7ffea91f7ca0, g=..., set_loss_grad=set_loss_grad@entry=false) at <work>/trainer/sdxl_lora.cpp:902
+902	        if (ggml_backend_graph_compute(backend, g.gf) != GGML_STATUS_SUCCESS) throw std::runtime_error("계산 실패");
+#12 0x00006381ab93cd8f in train_ckpt (O=..., backend_in=backend_in@entry=0x6381d8d002c0) at <work>/trainer/sdxl_lora.cpp:933
+933	        run(F, false);
+#13 0x00006381ab930872 in main (argc=<optimized out>, argv=<optimized out>) at <work>/trainer/sdxl_lora.cpp:1071
+1071	        else if (!O.train_dir.empty()) rc = O.ckpt ? train_ckpt(O, backend) : train(O, backend);
+[Inferior 1 (process 242995) detached]
+tools/guard.sh: line 17: 242995 Aborted                 "$@"
+GUARD done rc=134 peak_sum=6722MiB

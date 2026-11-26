@@ -1,0 +1,19 @@
+== grad-check selftest256 (--native all, 2번째 스텝)
+[ckpt] 계산 버퍼 883.1 MiB (그래프 19개 공유), GTT 5022 MiB
+[grad-check] step 2 t=417 loss ckpt 0.182707 / full 0.182707, LoRA 기울기 rel_l2 전체 8.237e-07 최악 3.607e-06 (lora.input_blocks.4.1.transformer_blocks.1.attn2.to_k.lora_up), ckpt 계산 버퍼 최대 883.1 MiB
+== grad-check dog384 (--native all, 2번째 스텝)
+[ckpt] 계산 버퍼 2040.5 MiB (그래프 19개 공유), GTT 6219 MiB
+[grad-check] step 2 t=626 loss ckpt 0.049950 / full 0.049950, LoRA 기울기 rel_l2 전체 5.517e-07 최악 2.150e-06 (lora.input_blocks.7.1.transformer_blocks.1.attn2.to_k.lora_down), ckpt 계산 버퍼 최대 2040.5 MiB
+== train ckpt native all 512
+[ckpt] 계산 버퍼 502.4 MiB (그래프 18개 공유), GTT 4737 MiB
+step    1  t=558  loss 0.04619  ema 0.04619  12.41s (fwd 3.60 bwd 8.73)  buf 502 MiB  GTT 4747 MiB  [alvan-nee-brFsZ7qszSY-unsplash]
+step    2  t=822  loss 0.00942  ema 0.04435  12.38s (fwd 3.59 bwd 8.72)  buf 502 MiB  GTT 4747 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]
+step    3  t=793  loss 0.00970  ema 0.04262  12.38s (fwd 3.59 bwd 8.72)  buf 502 MiB  GTT 4748 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]
+평균 스텝 시간 (첫 스텝 제외): 12.38s
+GUARD done rc=0 peak_sum=5729MiB
+== train ckpt native all 768
+오류: 그래프 할당이 안정되지 않음
+GUARD done rc=2 peak_sum=7387MiB
+== train ckpt native all 1024
+오류: 그래프 할당이 안정되지 않음
+GUARD done rc=2 peak_sum=8141MiB

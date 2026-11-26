@@ -1,0 +1,9 @@
+dog1024_lora.safetensors: up |w| 평균 2.015e-03, 최대 1.533e-02, up이 전부 0인 모듈 0/560, down |w| 평균 1.371e-02
+dog1024_fp16_lora.safetensors: up |w| 평균 4.223e-05, 최대 8.395e-03, up이 전부 0인 모듈 486/560, down |w| 평균 1.319e-02
+    첫 파일과 up 방향 유사도(cos) 0.000, 크기 비 0.098
+dog1024_lora_s100.safetensors: up |w| 평균 1.340e-03, 최대 8.805e-03, up이 전부 0인 모듈 0/560, down |w| 평균 1.340e-02
+    첫 파일과 up 방향 유사도(cos) 0.837, 크기 비 0.661
+dog1024_fp16_lora_s100.safetensors: up |w| 평균 2.572e-05, 최대 3.455e-03, up이 전부 0인 모듈 491/560, down |w| 평균 1.319e-02
+    첫 파일과 up 방향 유사도(cos) 0.000, 크기 비 0.058
+dog_lora.safetensors: up |w| 평균 3.182e-03, 최대 3.424e-02, up이 전부 0인 모듈 0/560, down |w| 평균 1.442e-02
+    첫 파일과 up 방향 유사도(cos) 0.208, 크기 비 1.616

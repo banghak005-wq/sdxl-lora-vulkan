@@ -1,0 +1,70 @@
+== 학습 전 평가 (seed 123, lr 0)
+step    1  t=646  loss 0.10010  ema 0.10010  16.83s  GTT 5374 MiB  [fox]
+step    2  t=566  loss 0.12789  ema 0.10149  16.82s  GTT 5374 MiB  [fox]
+step    3  t= 36  loss 0.35731  ema 0.11429  16.82s  GTT 5374 MiB  [fox]
+step    4  t=375  loss 0.22940  ema 0.12004  16.81s  GTT 5374 MiB  [fox]
+step    5  t=767  loss 0.04527  ema 0.11630  16.80s  GTT 5374 MiB  [fox]
+step    6  t=117  loss 0.44873  ema 0.13292  16.80s  GTT 5374 MiB  [fox]
+step    7  t=950  loss 0.01202  ema 0.12688  16.80s  GTT 5374 MiB  [fox]
+step    8  t=593  loss 0.11272  ema 0.12617  16.81s  GTT 5374 MiB  [fox]
+평균 스텝 시간 (첫 스텝 제외): 16.81s
+평균 손실: 0.17918
+GUARD done rc=0 peak_sum=6598MiB
+== 학습 (40 스텝, lr 1e-3)
+step    1  t=558  loss 0.13287  ema 0.13287  16.65s  GTT 5374 MiB  [fox]
+step    2  t=340  loss 0.24756  ema 0.13861  16.66s  GTT 5374 MiB  [fox]
+step    3  t=822  loss 0.02781  ema 0.13307  16.64s  GTT 5374 MiB  [fox]
+step    4  t=634  loss 0.06676  ema 0.12975  16.66s  GTT 5374 MiB  [fox]
+step    5  t=552  loss 0.08410  ema 0.12747  16.64s  GTT 5374 MiB  [fox]
+step    6  t=846  loss 0.01870  ema 0.12203  16.64s  GTT 5374 MiB  [fox]
+step    7  t=615  loss 0.05836  ema 0.11885  16.65s  GTT 5374 MiB  [fox]
+step    8  t=485  loss 0.08967  ema 0.11739  16.64s  GTT 5374 MiB  [fox]
+step    9  t=990  loss 0.00330  ema 0.11168  16.64s  GTT 5374 MiB  [fox]
+step   10  t=770  loss 0.02511  ema 0.10736  16.65s  GTT 5374 MiB  [fox]
+step   11  t=522  loss 0.08097  ema 0.10604  16.64s  GTT 5374 MiB  [fox]
+step   12  t= 66  loss 0.32028  ema 0.11675  16.65s  GTT 5374 MiB  [fox]
+step   13  t= 60  loss 0.29445  ema 0.12563  16.66s  GTT 5374 MiB  [fox]
+step   14  t=741  loss 0.02260  ema 0.12048  16.65s  GTT 5374 MiB  [fox]
+step   15  t=412  loss 0.11988  ema 0.12045  16.64s  GTT 5374 MiB  [fox]
+step   16  t=937  loss 0.00506  ema 0.11468  16.64s  GTT 5374 MiB  [fox]
+step   17  t=529  loss 0.06828  ema 0.11236  16.65s  GTT 5374 MiB  [fox]
+step   18  t=761  loss 0.02156  ema 0.10782  16.65s  GTT 5374 MiB  [fox]
+step   19  t=868  loss 0.00961  ema 0.10291  16.64s  GTT 5374 MiB  [fox]
+step   20  t=824  loss 0.01253  ema 0.09839  16.65s  GTT 5374 MiB  [fox]
+step   21  t=954  loss 0.00450  ema 0.09370  16.64s  GTT 5374 MiB  [fox]
+step   22  t=645  loss 0.04029  ema 0.09103  16.65s  GTT 5374 MiB  [fox]
+step   23  t= 53  loss 0.25090  ema 0.09902  16.64s  GTT 5374 MiB  [fox]
+step   24  t=477  loss 0.08984  ema 0.09856  16.65s  GTT 5374 MiB  [fox]
+step   25  t=350  loss 0.14219  ema 0.10074  16.64s  GTT 5374 MiB  [fox]
+step   26  t=692  loss 0.02736  ema 0.09707  16.65s  GTT 5374 MiB  [fox]
+step   27  t= 25  loss 0.21361  ema 0.10290  16.65s  GTT 5374 MiB  [fox]
+step   28  t=576  loss 0.05674  ema 0.10059  16.64s  GTT 5374 MiB  [fox]
+step   29  t=321  loss 0.15558  ema 0.10334  16.63s  GTT 5374 MiB  [fox]
+step   30  t=506  loss 0.07269  ema 0.10181  16.64s  GTT 5374 MiB  [fox]
+step   31  t=192  loss 0.23618  ema 0.10853  16.64s  GTT 5374 MiB  [fox]
+step   32  t=180  loss 0.23051  ema 0.11463  16.64s  GTT 5374 MiB  [fox]
+step   33  t= 49  loss 0.25284  ema 0.12154  16.65s  GTT 5374 MiB  [fox]
+step   34  t=707  loss 0.02484  ema 0.11670  16.65s  GTT 5374 MiB  [fox]
+step   35  t=372  loss 0.11672  ema 0.11670  16.64s  GTT 5374 MiB  [fox]
+step   36  t=685  loss 0.03051  ema 0.11239  16.65s  GTT 5374 MiB  [fox]
+step   37  t=337  loss 0.12969  ema 0.11326  16.64s  GTT 5374 MiB  [fox]
+step   38  t=215  loss 0.21241  ema 0.11822  16.65s  GTT 5374 MiB  [fox]
+step   39  t=681  loss 0.02920  ema 0.11377  16.64s  GTT 5374 MiB  [fox]
+step   40  t=999  loss 0.00288  ema 0.10822  16.65s  GTT 5374 MiB  [fox]
+평균 스텝 시간 (첫 스텝 제외): 16.65s
+평균 손실: 0.10072
+저장: out/selftest_lora.safetensors (1680 텐서, step 40)
+GUARD done rc=0 peak_sum=6593MiB
+== 학습 후 평가 (seed 123, lr 0)
+이어받기: out/selftest_lora.safetensors (alpha 8.000)
+step    1  t=646  loss 0.03614  ema 0.03614  16.63s  GTT 5374 MiB  [fox]
+step    2  t=566  loss 0.05151  ema 0.03691  16.62s  GTT 5374 MiB  [fox]
+step    3  t= 36  loss 0.22166  ema 0.04614  16.62s  GTT 5374 MiB  [fox]
+step    4  t=375  loss 0.11853  ema 0.04976  16.62s  GTT 5374 MiB  [fox]
+step    5  t=767  loss 0.01814  ema 0.04818  16.61s  GTT 5374 MiB  [fox]
+step    6  t=117  loss 0.27006  ema 0.05928  16.61s  GTT 5374 MiB  [fox]
+step    7  t=950  loss 0.00437  ema 0.05653  16.61s  GTT 5374 MiB  [fox]
+step    8  t=593  loss 0.05014  ema 0.05621  16.61s  GTT 5374 MiB  [fox]
+평균 스텝 시간 (첫 스텝 제외): 16.61s
+평균 손실: 0.09632
+GUARD done rc=0 peak_sum=6295MiB

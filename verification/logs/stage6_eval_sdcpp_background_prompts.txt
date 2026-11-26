@@ -1,0 +1,13 @@
+== a photo of sks dog on a sunny beach -> out/eval/beach_base_768_s42.png
+GUARD done rc=0 peak_sum=7951MiB
+== a photo of sks dog on a sunny beach<lora:dog_lora:1> -> out/eval/beach_dog_lora_w1_768_s42.png
+[I] (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/out/dog_lora.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=10056MiB
+== a photo of sks dog in a snowy forest -> out/eval/snow_base_768_s42.png
+GUARD done rc=0 peak_sum=7927MiB
+== a photo of sks dog in a snowy forest<lora:dog_lora:1> -> out/eval/snow_dog_lora_w1_768_s42.png
+[I] (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/out/dog_lora.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=9872MiB
+== a photo of sks dog on a sunny beach<lora:dog_lora:0.7> -> out/eval/beach_dog_lora_w0.7_768_s42.png
+GUARD KILL sum=13118MiB > 11264MiB
+GUARD done rc=143 peak_sum=13118MiB

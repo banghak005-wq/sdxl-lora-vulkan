@@ -1,0 +1,36 @@
+# version: 0.0.0
+# 학습기 UNet 검증용 기준값: sd.cpp SDXL UNet을 한 번 호출한 결과를 .npy로 내보낸다.
+# sample(x, [sigma, 0], euler)의 결과 = denoised D(x, sigma) (마지막 시그마가 0이면 euler 한 스텝이 D 그대로)
+# 실행 (sdxl-vulkan 폴더에서):
+#   sd-cli -M dgl --script trainer/dgl/ref_unet.dgl --tensor x x.npy --tensor d d.npy ...
+
+var {
+    model_path = "models/sd_xl_base_1.0.safetensors"
+    prompt = "a photo of a red fox sitting in a snowy forest"
+    width = 256
+    height = 256
+    latent = 32  # width / 8
+    t = 0.5  # 정규화 시간 (1 = 가장 시끄러운 끝)
+    seed = 7
+    backend = "cpu"
+}
+
+fn main() {
+    model = load_unet(model_path, family = "sdxl", backend = backend, flash_attn_mode = "off")
+    text = load_text_encoder(model_path, family = "sdxl", backend = "cpu")
+    cond = encode_prompt(text, prompt, width = width, height = height)
+    pos = predictor(model, {crossattn = cond.crossattn, vector = cond.vector}, prediction = "eps")
+
+    rng = make_rng("cuda", seed = seed)
+    x = tensor::randn_like(tensor::zeros([latent, latent, 4, 1]), rng = rng)
+    sigma = t_to_sigma(pos, t)
+    sc = denoiser_scalings(pos, sigma)
+    d = sample(x, tensor::vector([sigma, 0]), predict = pos, method = "euler", rng = rng)
+    return {
+        x = x,
+        d = d,
+        crossattn = cond.crossattn,
+        vector = cond.vector,
+        params = tensor::vector([sigma, sc.input_scale, sc.output_scale, sc.skip_scale, t]),
+    }
+}

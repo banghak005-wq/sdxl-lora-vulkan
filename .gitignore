@@ -1,0 +1,14 @@
+# 빌드/작업 폴더 (README 빌드·사용법대로 하면 생기는 것)
+/build/
+/ggml/
+/models/
+/out/
+/cache/
+/dataset/
+/logs/
+*.mem
+
+# 실수로 모델·LoRA 파일을 올리지 않도록
+*.safetensors
+*.ckpt
+/bin/

@@ -1,0 +1,1 @@
+sdxl_lora_server: http://127.0.0.1:8090  (root <work>, cli <work>/result/v0.1/bin/sdxl_lora)

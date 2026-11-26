@@ -1,0 +1,9 @@
+ggml_vulkan: Found 1 Vulkan devices:
+ggml_vulkan: 0 = AMD Radeon Graphics (RADV REMBRANDT) (radv) | uma: 1 | rebar: 1 | fp16: 0 | bf16: 0 | fp4: 0 | warp size: 32 | shared memory: 65536 | int dot: 1 | matrix cores: none
+backend=vulkan conv=f32 native=[] nodes: fwd=1288 total=2527
+compute buffer: 1.3 MiB
+out  rel_l2=1.960e-04
+loss ggml=1.369823 ref=1.369819 rel=2.785e-06
+lora grads: 64 tensors, overall rel_l2=4.009e-04, worst=7.514e-04 (lora.mb.1.tb0.attn1.to_out.0.ld)
+FAIL
+GUARD done rc=1 peak_sum=1143MiB

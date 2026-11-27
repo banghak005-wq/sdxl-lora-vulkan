@@ -1,0 +1,8 @@
+# v0.2 3단계 실물 SDXL 검증 (2026-11-26 19:00 KST), Vulkan GGML_VK_DISABLE_F16=1, --native all
+## sd.cpp DGL (CPU) LoRA 적용
+[I] (1878 / 1878) LoRA tensors have been applied, lora_file_path = <work>/trainer/ref_conv/test_lora_conv.safetensors --- lora.hpp:1135
+## --check-ref (rank 8 alpha 4 / conv_rank 4 conv_alpha 8, up~N(0,0.05))
+LoCon 시험 LoRA: eps rel_l2 vs sd.cpp = 2.388e-04
+대조: 합성곱 쪽 up 66개만 0 → 1.143e-02 (48배, 비교가 conv 기여를 잡아냄)
+v0.1 LoRA 회귀: 2.355e-04
+## --grad-check 256px: loss ckpt 0.308968 / full 0.308968, LoRA 기울기 rel_l2 전체 6.173e-07 최악 2.530e-06, 미지원 노드 0

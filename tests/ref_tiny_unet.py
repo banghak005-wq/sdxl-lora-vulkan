@@ -10,6 +10,9 @@ sd.cpp와 똑같이 계산하도록 맞춘 점:
   - SpatialTransformer의 GroupNorm eps=1e-6, ResBlock/출력 GroupNorm eps=1e-5, LayerNorm eps=1e-5
   - timestep embedding은 [cos, sin] 순서
 LoRA: 모든 SpatialTransformer의 attn1/attn2 to_q/to_k/to_v/to_out.0, rank 4, scale 1.
+--conv-lora (LoCon, kohya conv_dim 규칙): ResBlock/다운·업샘플의 3x3 합성곱 → rank CONV_RANK(3), scale CONV_SCALE(0.5),
+  ResBlock의 1x1 skip_connection, emb_layers.1 → rank 4, scale 1. conv_in/out.2 제외.
+  down = 원래와 같은 커널/stride/pad 합성곱 [r, cin, k, k], up = 1x1 [cout, r, 1, 1]
 출력 GGUF:
   w.*       기본 가중치 (고정)
   lora.*    LoRA 가중치 (학습 대상)
@@ -25,6 +28,8 @@ import torch.nn.functional as F
 import gguf
 
 MC, CTX, ADM, HEAD_DIM, GROUPS, RANK = 32, 24, 12, 16, 8, 4
+CONV_RANK, CONV_SCALE = 3, 0.5  # 어텐션 rank/scale과 일부러 다르게 (섞이면 드러나게)
+CONV_LORA = False
 TEMB = MC * 4
 
 W = {}      # 이름 -> 텐서 (고정 가중치)
@@ -58,7 +63,20 @@ def lin(name, x):
 
 def conv(name, x, stride=1):
     w = W[name + ".weight"]
-    return F.conv2d(x, w, W[name + ".bias"], stride=stride, padding=w.shape[-1] // 2)
+    y = F.conv2d(x, w, W[name + ".bias"], stride=stride, padding=w.shape[-1] // 2)
+    if name + ".lora_down" in LORA:
+        d = F.conv2d(x, LORA[name + ".lora_down"], stride=stride, padding=w.shape[-1] // 2)
+        sc = 1.0 if w.shape[-1] == 1 else CONV_SCALE
+        y = y + sc * F.conv2d(d, LORA[name + ".lora_up"])
+    return y
+
+
+def make_conv_lora(name, cin, cout, k):
+    if not CONV_LORA:
+        return
+    r = RANK if k == 1 else CONV_RANK
+    LORA[name + ".lora_down"] = rnd(r, cin, k, k, std=0.5 / math.sqrt(cin * k * k)).requires_grad_()
+    LORA[name + ".lora_up"] = rnd(cout, r, 1, 1, std=0.5 / math.sqrt(r)).requires_grad_()
 
 
 def gn(name, x, eps):
@@ -79,11 +97,17 @@ def make_res(p, cin, cout):
     conv_w(p + ".out_layers.3", cout, cout, 3)
     if cin != cout:
         conv_w(p + ".skip_connection", cin, cout, 1)
+    make_conv_lora(p + ".in_layers.2", cin, cout, 3)
+    make_conv_lora(p + ".out_layers.3", cout, cout, 3)
+    if cin != cout:
+        make_conv_lora(p + ".skip_connection", cin, cout, 1)
+    if CONV_LORA:
+        make_lora(p + ".emb_layers.1", TEMB, cout)
 
 
 def res(p, x, emb):
     h = conv(p + ".in_layers.2", F.silu(gn(p + ".in_layers.0", x, 1e-5)))
-    h = h + lin(p + ".emb_layers.1", F.silu(emb))[:, :, None, None]
+    h = h + lora_lin(p + ".emb_layers.1", F.silu(emb))[:, :, None, None]
     h = conv(p + ".out_layers.3", F.silu(gn(p + ".out_layers.0", h, 1e-5)))
     skip = conv(p + ".skip_connection", x) if (p + ".skip_connection.weight") in W else x
     return skip + h
@@ -176,6 +200,7 @@ def build():
     conv_w("input_blocks.0.0", 4, MC, 3)
     make_res("input_blocks.1.0", MC, MC)
     conv_w("input_blocks.2.0.op", MC, MC, 3)
+    make_conv_lora("input_blocks.2.0.op", MC, MC, 3)
     make_res("input_blocks.3.0", MC, 2 * MC)
     make_st("input_blocks.3.1", 2 * MC)
     make_res("middle_block.0", 2 * MC, 2 * MC)
@@ -186,6 +211,7 @@ def build():
     make_res("output_blocks.1.0", 3 * MC, 2 * MC)
     make_st("output_blocks.1.1", 2 * MC)
     conv_w("output_blocks.1.2.conv", 2 * MC, 2 * MC, 3)
+    make_conv_lora("output_blocks.1.2.conv", 2 * MC, 2 * MC, 3)
     make_res("output_blocks.2.0", 3 * MC, MC)
     make_res("output_blocks.3.0", 2 * MC, MC)
     norm_w("out.0", MC)
@@ -217,7 +243,10 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--size", type=int, default=8, help="잠재값 한 변 (짝수)")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--conv-lora", action="store_true", help="합성곱 LoRA(LoCon)도 넣기")
     a = ap.parse_args()
+    global CONV_LORA
+    CONV_LORA = a.conv_lora
     gen = torch.Generator().manual_seed(a.seed)
 
     build()
@@ -236,6 +265,7 @@ def main():
     wr = gguf.GGUFWriter(a.out, "tinyunet")
     wr.add_uint32("tiny.size", s)
     wr.add_uint32("tiny.n_lora", len(LORA))
+    wr.add_float32("tiny.conv_lora_scale", CONV_SCALE)
 
     def put(name, t):
         wr.add_tensor(abbr(name), np.ascontiguousarray(t.detach().numpy().astype(np.float32)))

@@ -1,0 +1,60 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SDXL LoRA on Vulkan (Radeon 660M)</title>
+<style>body{font-family:sans-serif;margin:16px;background:#111;color:#eee}h2{font-size:1.05em;margin:28px 0 8px}.row{display:flex;gap:10px;overflow-x:auto;align-items:flex-start}figure{margin:0;flex:none}img{display:block;max-width:none;width:auto;height:auto;image-rendering:auto}figcaption{font-size:.85em;color:#bbb;padding:4px 0}a{color:inherit}</style>
+<h1>SDXL LoRA — 660M iGPU Vulkan 학습 결과</h1>
+<p>학습: diffusers/dog-example 5장, 캡션 "a photo of sks dog", rank 8, f32. 768px 줄 = 384px 학습(200/400/600스텝), 1024px 줄 = 1024px 학습(200스텝, 체크포인팅). 생성: sd.cpp Vulkan, 768px(384px 학습본) / 1024px(1024px 학습본), 20스텝, cfg 7, 같은 seed로 LoRA 없음/있음 비교.</p>
+<h2>"a photo of sks dog on a sunny beach" — 1024px, seed 42</h2><div class="row">
+<figure><a href="beach1024_base_1024_s42.png"><img loading="lazy" src="beach1024_base_1024_s42.png"></a><figcaption>LoRA 없음</figcaption></figure>
+<figure><a href="beach1024_dog_lora_w1_1024_s42.png"><img loading="lazy" src="beach1024_dog_lora_w1_1024_s42.png"></a><figcaption>LoRA 384px 학습 600스텝</figcaption></figure>
+<figure><a href="beach1024_dog1024_lora_w1_1024_s42.png"><img loading="lazy" src="beach1024_dog1024_lora_w1_1024_s42.png"></a><figcaption>LoRA 1024px 학습 200스텝 f32</figcaption></figure>
+</div>
+<h2>"a photo of sks dog on a sunny beach" — 768px, seed 42</h2><div class="row">
+<figure><a href="beach_base_768_s42.png"><img loading="lazy" src="beach_base_768_s42.png"></a><figcaption>LoRA 없음</figcaption></figure>
+<figure><a href="beach_dog_lora_w1_768_s42.png"><img loading="lazy" src="beach_dog_lora_w1_768_s42.png"></a><figcaption>LoRA 384px 학습 600스텝</figcaption></figure>
+<figure><a href="beach_dog_lora_w0.7_768_s42.png"><img loading="lazy" src="beach_dog_lora_w0.7_768_s42.png"></a><figcaption>LoRA 384px 학습 600스텝 가중치 0.7</figcaption></figure>
+</div>
+<h2>"bucket" — 1024px, seed 42</h2><div class="row">
+<figure><a href="bucket1024_base_1024_s42.png"><img loading="lazy" src="bucket1024_base_1024_s42.png"></a><figcaption>LoRA 없음</figcaption></figure>
+<figure><a href="bucket1024_dog_lora_w1_1024_s42.png"><img loading="lazy" src="bucket1024_dog_lora_w1_1024_s42.png"></a><figcaption>LoRA 384px 학습 600스텝</figcaption></figure>
+<figure><a href="bucket1024_dog1024_lora_w1_1024_s42.png"><img loading="lazy" src="bucket1024_dog1024_lora_w1_1024_s42.png"></a><figcaption>LoRA 1024px 학습 200스텝 f32</figcaption></figure>
+</div>
+<h2>"bucket" — 768px, seed 42</h2><div class="row">
+<figure><a href="bucket_base_768_s42.png"><img loading="lazy" src="bucket_base_768_s42.png"></a><figcaption>LoRA 없음</figcaption></figure>
+<figure><a href="bucket_dog_lora_w1_768_s42.png"><img loading="lazy" src="bucket_dog_lora_w1_768_s42.png"></a><figcaption>LoRA 384px 학습 600스텝</figcaption></figure>
+</div>
+<h2>"dog" — 768px, seed 42</h2><div class="row">
+<figure><a href="dog0_base_768_s42.png"><img loading="lazy" src="dog0_base_768_s42.png"></a><figcaption>LoRA 없음</figcaption></figure>
+<figure><a href="dog0_dog_lora_w1_768_s42.png"><img loading="lazy" src="dog0_dog_lora_w1_768_s42.png"></a><figcaption>LoRA 384px 학습 600스텝</figcaption></figure>
+</div>
+<h2>"a photo of sks dog in a snowy forest" — 1024px, seed 42</h2><div class="row">
+<figure><a href="snow1024_base_1024_s42.png"><img loading="lazy" src="snow1024_base_1024_s42.png"></a><figcaption>LoRA 없음</figcaption></figure>
+<figure><a href="snow1024_dog_lora_w1_1024_s42.png"><img loading="lazy" src="snow1024_dog_lora_w1_1024_s42.png"></a><figcaption>LoRA 384px 학습 600스텝</figcaption></figure>
+<figure><a href="snow1024_dog1024_lora_w1_1024_s42.png"><img loading="lazy" src="snow1024_dog1024_lora_w1_1024_s42.png"></a><figcaption>LoRA 1024px 학습 200스텝 f32</figcaption></figure>
+</div>
+<h2>"a photo of sks dog in a snowy forest" — 768px, seed 42</h2><div class="row">
+<figure><a href="snow_base_768_s42.png"><img loading="lazy" src="snow_base_768_s42.png"></a><figcaption>LoRA 없음</figcaption></figure>
+<figure><a href="snow_dog_lora_w1_768_s42.png"><img loading="lazy" src="snow_dog_lora_w1_768_s42.png"></a><figcaption>LoRA 384px 학습 600스텝</figcaption></figure>
+</div>
+<h2>"기타" — px, seed </h2><div class="row">
+<figure><a href="beach1024_dog1024_locon_w1_1024_s42.png"><img loading="lazy" src="beach1024_dog1024_locon_w1_1024_s42.png"></a><figcaption>beach1024_dog1024_locon_w1_1024_s42.png</figcaption></figure>
+<figure><a href="beach1024_dog_locon_w1_1024_s42.png"><img loading="lazy" src="beach1024_dog_locon_w1_1024_s42.png"></a><figcaption>beach1024_dog_locon_w1_1024_s42.png</figcaption></figure>
+<figure><a href="beach_dog768_attn_w1_768_s42.png"><img loading="lazy" src="beach_dog768_attn_w1_768_s42.png"></a><figcaption>beach_dog768_attn_w1_768_s42.png</figcaption></figure>
+<figure><a href="beach_dog768_locon_w1_768_s42.png"><img loading="lazy" src="beach_dog768_locon_w1_768_s42.png"></a><figcaption>beach_dog768_locon_w1_768_s42.png</figcaption></figure>
+<figure><a href="beach_dog_locon_w0.7_768_s42.png"><img loading="lazy" src="beach_dog_locon_w0.7_768_s42.png"></a><figcaption>beach_dog_locon_w0.7_768_s42.png</figcaption></figure>
+<figure><a href="beach_dog_locon_w1_768_s42.png"><img loading="lazy" src="beach_dog_locon_w1_768_s42.png"></a><figcaption>beach_dog_locon_w1_768_s42.png</figcaption></figure>
+<figure><a href="bucket1024_dog1024_locon_w1_1024_s42.png"><img loading="lazy" src="bucket1024_dog1024_locon_w1_1024_s42.png"></a><figcaption>bucket1024_dog1024_locon_w1_1024_s42.png</figcaption></figure>
+<figure><a href="bucket1024_dog_locon_w1_1024_s42.png"><img loading="lazy" src="bucket1024_dog_locon_w1_1024_s42.png"></a><figcaption>bucket1024_dog_locon_w1_1024_s42.png</figcaption></figure>
+<figure><a href="bucket_dog768_attn_w1_768_s42.png"><img loading="lazy" src="bucket_dog768_attn_w1_768_s42.png"></a><figcaption>bucket_dog768_attn_w1_768_s42.png</figcaption></figure>
+<figure><a href="bucket_dog768_convonly_w1_768_s42.png"><img loading="lazy" src="bucket_dog768_convonly_w1_768_s42.png"></a><figcaption>bucket_dog768_convonly_w1_768_s42.png</figcaption></figure>
+<figure><a href="bucket_dog768_locon_w1_768_s42.png"><img loading="lazy" src="bucket_dog768_locon_w1_768_s42.png"></a><figcaption>bucket_dog768_locon_w1_768_s42.png</figcaption></figure>
+<figure><a href="bucket_dog_locon_w1_768_s42.png"><img loading="lazy" src="bucket_dog_locon_w1_768_s42.png"></a><figcaption>bucket_dog_locon_w1_768_s42.png</figcaption></figure>
+<figure><a href="dog0_dog768_attn_w1_768_s42.png"><img loading="lazy" src="dog0_dog768_attn_w1_768_s42.png"></a><figcaption>dog0_dog768_attn_w1_768_s42.png</figcaption></figure>
+<figure><a href="dog0_dog768_convonly_w1_768_s42.png"><img loading="lazy" src="dog0_dog768_convonly_w1_768_s42.png"></a><figcaption>dog0_dog768_convonly_w1_768_s42.png</figcaption></figure>
+<figure><a href="dog0_dog768_locon_w1_768_s42.png"><img loading="lazy" src="dog0_dog768_locon_w1_768_s42.png"></a><figcaption>dog0_dog768_locon_w1_768_s42.png</figcaption></figure>
+<figure><a href="dog0_dog_locon_w1_768_s42.png"><img loading="lazy" src="dog0_dog_locon_w1_768_s42.png"></a><figcaption>dog0_dog_locon_w1_768_s42.png</figcaption></figure>
+<figure><a href="snow1024_dog1024_locon_w1_1024_s42.png"><img loading="lazy" src="snow1024_dog1024_locon_w1_1024_s42.png"></a><figcaption>snow1024_dog1024_locon_w1_1024_s42.png</figcaption></figure>
+<figure><a href="snow1024_dog_locon_w1_1024_s42.png"><img loading="lazy" src="snow1024_dog_locon_w1_1024_s42.png"></a><figcaption>snow1024_dog_locon_w1_1024_s42.png</figcaption></figure>
+<figure><a href="snow_dog768_attn_w1_768_s42.png"><img loading="lazy" src="snow_dog768_attn_w1_768_s42.png"></a><figcaption>snow_dog768_attn_w1_768_s42.png</figcaption></figure>
+<figure><a href="snow_dog768_locon_w1_768_s42.png"><img loading="lazy" src="snow_dog768_locon_w1_768_s42.png"></a><figcaption>snow_dog768_locon_w1_768_s42.png</figcaption></figure>
+<figure><a href="snow_dog_locon_w1_768_s42.png"><img loading="lazy" src="snow_dog_locon_w1_768_s42.png"></a><figcaption>snow_dog_locon_w1_768_s42.png</figcaption></figure>
+</div>

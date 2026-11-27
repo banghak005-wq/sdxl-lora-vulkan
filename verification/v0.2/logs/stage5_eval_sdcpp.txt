@@ -1,0 +1,23 @@
+== a photo of sks dog<lora:dog768_attn:1> -> out/eval/dog0_dog768_attn_w1_768_s42.png
+GUARD done rc=0 peak_sum=7801MiB
+== a photo of sks dog<lora:dog768_locon:1> -> out/eval/dog0_dog768_locon_w1_768_s42.png
+GUARD done rc=0 peak_sum=8135MiB
+== a photo of sks dog in a bucket<lora:dog768_attn:1> -> out/eval/bucket_dog768_attn_w1_768_s42.png
+GUARD done rc=0 peak_sum=7774MiB
+== a photo of sks dog in a bucket<lora:dog768_locon:1> -> out/eval/bucket_dog768_locon_w1_768_s42.png
+GUARD done rc=0 peak_sum=8075MiB
+== a photo of sks dog on a sunny beach<lora:dog768_attn:1> -> out/eval/beach_dog768_attn_w1_768_s42.png
+GUARD done rc=0 peak_sum=7931MiB
+== a photo of sks dog on a sunny beach<lora:dog768_locon:1> -> out/eval/beach_dog768_locon_w1_768_s42.png
+GUARD done rc=0 peak_sum=8092MiB
+== a photo of sks dog in a snowy forest<lora:dog768_attn:1> -> out/eval/snow_dog768_attn_w1_768_s42.png
+GUARD done rc=0 peak_sum=7760MiB
+== a photo of sks dog in a snowy forest<lora:dog768_locon:1> -> out/eval/snow_dog768_locon_w1_768_s42.png
+GUARD done rc=0 peak_sum=8061MiB
+== a photo of sks dog in a bucket<lora:dog1024_locon:1> -> out/eval/bucket1024_dog1024_locon_w1_1024_s42.png
+GUARD done rc=0 peak_sum=8782MiB
+== a photo of sks dog in a snowy forest<lora:dog1024_locon:1> -> out/eval/snow1024_dog1024_locon_w1_1024_s42.png
+GUARD done rc=0 peak_sum=8782MiB
+== a photo of sks dog on a sunny beach<lora:dog1024_locon:1> -> out/eval/beach1024_dog1024_locon_w1_1024_s42.png
+GUARD done rc=0 peak_sum=8763MiB
+EVAL ALL DONE

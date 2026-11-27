@@ -1,0 +1,55 @@
+== 학습 전 평가 (seed 123, lr 0)
+step    1  t=251  loss 0.35490  ema 0.35490  2.87s  GTT 5323 MiB  [fox]
+step    2  t=413  loss 0.24070  ema 0.34919  2.86s  GTT 5323 MiB  [fox]
+step    3  t=376  loss 0.25635  ema 0.34454  2.86s  GTT 5323 MiB  [fox]
+step    4  t=282  loss 0.32857  ema 0.34374  2.85s  GTT 5323 MiB  [fox]
+step    5  t=856  loss 0.02565  ema 0.32784  2.86s  GTT 5323 MiB  [fox]
+step    6  t=367  loss 0.23084  ema 0.32299  2.86s  GTT 5323 MiB  [fox]
+step    7  t=621  loss 0.08551  ema 0.31112  2.86s  GTT 5323 MiB  [fox]
+step    8  t=194  loss 0.43347  ema 0.31723  2.85s  GTT 5323 MiB  [fox]
+평균 스텝 시간 (첫 스텝 제외): 2.86s
+평균 손실: 0.24450
+GUARD done rc=0 peak_sum=6707MiB
+== 학습 40스텝 lr 1e-3 (ckpt)
+[ckpt] 블록 20개, 블록 출력+기울기 저장 31.6 MiB, 영구 버퍼 83.7 MiB
+step    1  t=920  loss 0.01210  ema 0.01210  4.10s (fwd 1.10 bwd 2.90)  buf 162 MiB  GTT 4340 MiB  [fox]
+step   10  t=114  loss 0.28140  ema 0.05841  4.06s (fwd 1.09 bwd 2.88)  buf 162 MiB  GTT 4341 MiB  [fox]
+step   20  t=576  loss 0.05535  ema 0.07365  4.06s (fwd 1.09 bwd 2.88)  buf 162 MiB  GTT 4341 MiB  [fox]
+step   30  t=236  loss 0.17528  ema 0.07929  4.06s (fwd 1.09 bwd 2.88)  buf 162 MiB  GTT 4341 MiB  [fox]
+step   40  t=616  loss 0.03476  ema 0.07918  4.06s (fwd 1.09 bwd 2.88)  buf 162 MiB  GTT 4341 MiB  [fox]
+평균 스텝 시간 (첫 스텝 제외): 4.06s
+평균 손실: 0.09833
+저장: out/v02/selftest_locon.safetensors (1878 텐서, step 40)
+GUARD done rc=0 peak_sum=5694MiB
+== 학습 후 평가 (비ckpt)
+이어받기: out/v02/selftest_locon.safetensors (alpha 8.000, conv_alpha 4.000)
+step    1  t=251  loss 0.15689  ema 0.15689  2.87s  GTT 5323 MiB  [fox]
+step    2  t=413  loss 0.09381  ema 0.15374  2.86s  GTT 5323 MiB  [fox]
+step    3  t=376  loss 0.11338  ema 0.15172  2.86s  GTT 5323 MiB  [fox]
+step    4  t=282  loss 0.14824  ema 0.15155  2.86s  GTT 5323 MiB  [fox]
+step    5  t=856  loss 0.00813  ema 0.14438  2.86s  GTT 5323 MiB  [fox]
+step    6  t=367  loss 0.10442  ema 0.14238  2.85s  GTT 5323 MiB  [fox]
+step    7  t=621  loss 0.03612  ema 0.13707  2.85s  GTT 5323 MiB  [fox]
+step    8  t=194  loss 0.20784  ema 0.14060  2.85s  GTT 5323 MiB  [fox]
+평균 스텝 시간 (첫 스텝 제외): 2.86s
+평균 손실: 0.10860
+GUARD done rc=0 peak_sum=6600MiB
+== 학습 후 평가 (ckpt)
+이어받기: out/v02/selftest_locon.safetensors (alpha 8.000, conv_alpha 4.000)
+[ckpt] 블록 20개, 블록 출력+기울기 저장 31.6 MiB, 영구 버퍼 83.7 MiB
+step    1  t=251  loss 0.15689  ema 0.15689  4.09s (fwd 1.11 bwd 2.89)  buf 162 MiB  GTT 4340 MiB  [fox]
+step    2  t=413  loss 0.09381  ema 0.15374  4.07s (fwd 1.09 bwd 2.89)  buf 162 MiB  GTT 4340 MiB  [fox]
+step    3  t=376  loss 0.11338  ema 0.15172  4.07s (fwd 1.09 bwd 2.88)  buf 162 MiB  GTT 4340 MiB  [fox]
+step    4  t=282  loss 0.14824  ema 0.15155  4.07s (fwd 1.09 bwd 2.89)  buf 162 MiB  GTT 4340 MiB  [fox]
+step    5  t=856  loss 0.00813  ema 0.14438  4.07s (fwd 1.09 bwd 2.89)  buf 162 MiB  GTT 4340 MiB  [fox]
+step    6  t=367  loss 0.10442  ema 0.14238  4.06s (fwd 1.09 bwd 2.89)  buf 162 MiB  GTT 4340 MiB  [fox]
+step    7  t=621  loss 0.03612  ema 0.13707  4.06s (fwd 1.09 bwd 2.88)  buf 162 MiB  GTT 4340 MiB  [fox]
+step    8  t=194  loss 0.20784  ema 0.14060  4.07s (fwd 1.09 bwd 2.89)  buf 162 MiB  GTT 4340 MiB  [fox]
+평균 스텝 시간 (첫 스텝 제외): 4.07s
+평균 손실: 0.10860
+GUARD done rc=0 peak_sum=5679MiB
+== 학습 후 lora_up 크기 (40스텝)
+emb Linear: 모듈 17, up |w| 평균 6.155e-03, 0으로 남은 모듈 0
+3x3 합성곱: 모듈 38, up |w| 평균 6.064e-03, 0으로 남은 모듈 0
+1x1 skip: 모듈 11, up |w| 평균 6.211e-03, 0으로 남은 모듈 0
+어텐션: 모듈 560, up |w| 평균 6.038e-03, 0으로 남은 모듈 0

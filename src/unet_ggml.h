@@ -34,7 +34,8 @@ struct UNetBuilder {
     std::function<bool(const std::string &)>          has;  // 가중치 존재 여부
     std::set<std::string>                             native;  // norm, gn, geglu, concat, upscale, all
     bool                                              conv_f16   = false;  // im2col을 f16으로
-    float                                             lora_scale = 1.0f;   // alpha / rank
+    float                                             lora_scale = 1.0f;   // alpha / rank (Linear, 1x1 합성곱)
+    float                                             conv_lora_scale = 1.0f;  // conv_alpha / conv_rank (k>1 합성곱, LoCon)
     std::vector<ggml_tensor *>                        zero_leafs;          // 0으로 채워야 하는 상수 텐서
 
     bool nat(const char * op) const { return native.count(op) || native.count("all"); }
@@ -142,8 +143,23 @@ struct UNetBuilder {
         ggml_tensor * col = ggml_im2col(C, k, x, stride, stride, pad, pad, 1, 1, true,
                                         conv_f16 ? GGML_TYPE_F16 : GGML_TYPE_F32);  // [N, OH, OW, IC*KH*KW]
         const int64_t ow = col->ne[1], oh = col->ne[2], oc = k->ne[3];
-        ggml_tensor * y  = ggml_mul_mat(C, ggml_reshape_2d(C, k, k->ne[0] * k->ne[1] * k->ne[2], oc),
-                                        ggml_reshape_2d(C, col, col->ne[0], ow * oh * col->ne[3]));  // [OC, OW*OH*N]
+        ggml_tensor * col2 = ggml_reshape_2d(C, col, col->ne[0], ow * oh * col->ne[3]);  // [IC*KH*KW, P]
+        ggml_tensor * y    = ggml_mul_mat(C, ggml_reshape_2d(C, k, k->ne[0] * k->ne[1] * k->ne[2], oc), col2);  // [OC, P]
+        // LoCon (kohya와 같은 구조): down = 원래와 같은 커널/stride/pad의 합성곱(출력 rank), up = 1x1 합성곱.
+        // down은 원래 합성곱의 im2col 결과를 그대로 써서 행렬곱 하나로 끝난다 (IM2COL_BACK도 하나로 합쳐짐).
+        if (has("lora." + p + ".lora_down")) {
+            ggml_tensor * dn = W("lora." + p + ".lora_down");  // [KW, KH, IC, R]
+            ggml_tensor * up = W("lora." + p + ".lora_up");    // [1, 1, R, OC]
+            const int64_t r  = dn->ne[3];
+            ggml_tensor * c  = col2->type == GGML_TYPE_F32 ? col2 : ggml_cast(C, col2, GGML_TYPE_F32);
+            ggml_tensor * d  = ggml_mul_mat(C, ggml_reshape_2d(C, dn, dn->ne[0] * dn->ne[1] * dn->ne[2], r), c);  // [R, P]
+            ggml_tensor * u  = ggml_mul_mat(C, ggml_reshape_2d(C, up, r, oc), d);                                 // [OC, P]
+            const float   sc = (k->ne[0] == 1 && k->ne[1] == 1) ? lora_scale : conv_lora_scale;
+            if (sc != 1.0f) {
+                u = ggml_scale(C, u, sc);
+            }
+            y = ggml_add(C, y, u);
+        }
         y = ggml_reshape_4d(C, y, oc, ow, oh, col->ne[3]);
         y = ggml_cont(C, ggml_permute(C, y, 2, 0, 1, 3));  // [OW, OH, OC, N]
         return ggml_add(C, y, ggml_reshape_4d(C, W(p + ".bias"), 1, 1, oc, 1));
@@ -151,7 +167,7 @@ struct UNetBuilder {
 
     ggml_tensor * res(const std::string & p, ggml_tensor * x, ggml_tensor * emb) {
         ggml_tensor * h = conv(p + ".in_layers.2", ggml_silu(C, group_norm(p + ".in_layers.0", x, 1e-5f)));
-        ggml_tensor * e = linear(p + ".emb_layers.1", ggml_silu(C, emb));  // [Cout, 1]
+        ggml_tensor * e = lora_linear(p + ".emb_layers.1", ggml_silu(C, emb));  // [Cout, 1] (LoCon 켜면 LoRA)
         h = ggml_add(C, h, ggml_reshape_4d(C, e, 1, 1, e->ne[0], 1));
         h = conv(p + ".out_layers.3", ggml_silu(C, group_norm(p + ".out_layers.0", h, 1e-5f)));
         ggml_tensor * skip = has(p + ".skip_connection.weight") ? conv(p + ".skip_connection", x) : x;

@@ -180,6 +180,10 @@ int main(int argc, char ** argv) {
     B.has      = [](const std::string & n) { return has(n); };
     B.native   = O.native;
     B.conv_f16 = O.conv_f16;
+    {   // 3x3 합성곱 LoRA scale (ref_tiny_unet.py --conv-lora). 1x1/Linear는 1
+        const int64_t kid = gguf_find_key(g, "tiny.conv_lora_scale");
+        if (kid >= 0) B.conv_lora_scale = gguf_get_val_f32(g, kid);
+    }
     ggml_tensor * out = B.unet(W("in.x"), W("in.timestep"), W("in.context"), W("in.y"));
     ggml_set_output(out);
     ggml_tensor * diff = ggml_sub(C, out, W("in.target"));

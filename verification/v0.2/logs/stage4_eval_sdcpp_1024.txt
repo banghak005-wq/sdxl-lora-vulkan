@@ -1,0 +1,9 @@
+== a photo of sks dog in a bucket<lora:dog_locon:1> -> out/eval/bucket1024_dog_locon_w1_1024_s42.png
+[I] diffusion: (1878 / 1878) LoRA tensors have been applied, lora_file_path = <work>/out/dog_locon.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=8948MiB
+== a photo of sks dog in a snowy forest<lora:dog_locon:1> -> out/eval/snow1024_dog_locon_w1_1024_s42.png
+[I] diffusion: (1878 / 1878) LoRA tensors have been applied, lora_file_path = <work>/out/dog_locon.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=8842MiB
+== a photo of sks dog on a sunny beach<lora:dog_locon:1> -> out/eval/beach1024_dog_locon_w1_1024_s42.png
+[I] diffusion: (1878 / 1878) LoRA tensors have been applied, lora_file_path = <work>/out/dog_locon.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=8829MiB

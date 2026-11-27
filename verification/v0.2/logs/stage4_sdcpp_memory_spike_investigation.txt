@@ -1,0 +1,30 @@
+# sd.cpp 생성 중 '메모리 급증' 조사 (2026-11-26). 결론: lxcfs(free) 측정 착시, sd.cpp/LoRA 무관
+
+## 1) LoRA 종류·가중치별 512px 4스텝 (tools/lora_mem_probe.sh). anon_max = sd-cli 프로세스 자신의 RssAnon, ct_max = guard의 free used(옛 방식)
+attn_w1        w=1    anon_max=  283 MiB (t=1.4s) gtt= 5944  ct_max=6581 GUARD KILL sum=12525MiB > 11264MiB GUARD done rc=143 peak_sum=12525MiB 
+attn_w07       w=0.7  anon_max=  452 MiB (t=6.4s) gtt= 6373  ct_max=1461 GUARD done rc=0 peak_sum=7667MiB (1680 / 1680) LoRA tensors
+locon_w1       w=1    anon_max=  477 MiB (t=7.5s) gtt= 6469  ct_max=1539 GUARD done rc=0 peak_sum=7816MiB (1878 / 1878) LoRA tensors
+locon_w07      w=0.7  anon_max=  454 MiB (t=7.7s) gtt= 6468  ct_max=1720 GUARD done rc=0 peak_sum=7768MiB (1878 / 1878) LoRA tensors
+locon_w07b     w=0.7  anon_max=  449 MiB (t=7.7s) gtt= 6468  ct_max=1551 GUARD done rc=0 peak_sum=7785MiB (1878 / 1878) LoRA tensors
+locon_w13      w=1.3  anon_max=  416 MiB (t=7.9s) gtt= 6469  ct_max=1476 GUARD done rc=0 peak_sum=7772MiB (1878 / 1878) LoRA tensors
+nonattn_w1     w=1    anon_max=  432 MiB (t=5.6s) gtt= 6052  ct_max=1644 GUARD done rc=0 peak_sum=7588MiB (198 / 198) LoRA tensors
+nonattn_w07    w=0.7  anon_max=  429 MiB (t=6.3s) gtt= 6052  ct_max=1560 GUARD done rc=0 peak_sum=7504MiB (198 / 198) LoRA tensors
+conv3_w07      w=0.7  anon_max=  452 MiB (t=7.2s) gtt= 6052  ct_max=1789 GUARD done rc=0 peak_sum=7454MiB (114 / 114) LoRA tensors
+small_w07      w=0.7  anon_max=  453 MiB (t=7.2s) gtt= 6373  ct_max=1601 GUARD done rc=0 peak_sum=7665MiB (84 / 84) LoRA tensors
+
+## 2) LoRA 없이 8회 반복
+repro1         w=1    anon_max=  430 MiB (t=6.1s) gtt= 6373  ct_max=1583 GUARD done rc=0 peak_sum=7661MiB 
+repro2         w=1    anon_max=  404 MiB (t=7.6s) gtt= 6373  ct_max=1503 GUARD done rc=0 peak_sum=7656MiB 
+repro3         w=1    anon_max=  421 MiB (t=6.8s) gtt= 6373  ct_max=1500 GUARD done rc=0 peak_sum=7663MiB 
+repro4         w=1    anon_max=  446 MiB (t=6.1s) gtt= 6373  ct_max=1483 GUARD done rc=0 peak_sum=7666MiB 
+repro5         w=1    anon_max=  448 MiB (t=7.1s) gtt= 6374  ct_max=1599 GUARD done rc=0 peak_sum=7661MiB 
+repro6         w=1    anon_max=  435 MiB (t=5.3s) gtt= 6373  ct_max=1581 GUARD done rc=0 peak_sum=7650MiB 
+repro7         w=1    anon_max=  440 MiB (t=6.8s) gtt= 6374  ct_max=1622 GUARD done rc=0 peak_sum=7652MiB 
+repro8         w=1    anon_max=  441 MiB (t=6.9s) gtt= 6374  ct_max=1506 GUARD done rc=0 peak_sum=7651MiB 
+
+## 3) free used vs cgroup 실제(anon+kernel), 0.1초 샘플 (tools/memsample.sh)
+logs/memsample_batch.tsv: 샘플 4697, 어긋남 -950 ~ +428 MiB
+logs/memsample_repro.tsv: 샘플 2021, 어긋남 -949 ~ +321 MiB
+KILL된 실행(attn_w1)의 guard 기록: ... gtt=5944 ct=243 → 0.2초 뒤 ct=6581 (243MiB는 불가능한 값: Claude Code 프로세스만 ~1GB)
+
+## 4) 처음 실패한 768px LoCon 가중치 0.7을 고친 guard(cgroup anon+kernel+shmem)로 재실행: 통과, 실제 ct 최대 1593 / 옛 fu 최대 1904 / gtt 6832 / 합계 8395 MiB

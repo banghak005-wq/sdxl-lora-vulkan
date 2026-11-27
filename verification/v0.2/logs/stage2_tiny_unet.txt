@@ -1,0 +1,82 @@
+# v0.2 2단계: 축소판 UNet conv LoRA 기울기 vs PyTorch float64 (2026-11-26 18:52 KST)
+# 정답지: python3 tests/ref_tiny_unet.py --out <f> --size 8 [--seed 1 --size 16] [--conv-lora]
+
+## tinyunet v02_tiny8.gguf --backend cpu (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=cpu conv=f32 native=[] nodes: fwd=1292 total=2992
+compute buffer: 1.3 MiB
+out  rel_l2=1.215e-06
+loss ggml=1.369819 ref=1.369819 rel=0.000e+00
+lora grads: 64 tensors, overall rel_l2=1.691e-06, worst=3.699e-06 (lora.mb.1.tb0.attn1.to_q.ld)
+PASS
+
+## tinyunet v02_tiny8.gguf --backend vulkan (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=vulkan conv=f32 native=[] nodes: fwd=1292 total=2992
+compute buffer: 1.3 MiB
+out  rel_l2=2.464e-06
+loss ggml=1.369818 ref=1.369819 rel=2.611e-07
+lora grads: 64 tensors, overall rel_l2=3.512e-06, worst=8.391e-06 (lora.mb.1.tb0.attn1.to_q.ld)
+PASS
+
+## tinyunet v02_tiny8c.gguf --backend cpu (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=cpu conv=f32 native=[] nodes: fwd=1511 total=3971
+compute buffer: 2.6 MiB
+out  rel_l2=9.273e-07
+loss ggml=1.272712 ref=1.272712 rel=9.367e-08
+lora grads: 126 tensors, overall rel_l2=1.655e-06, worst=3.871e-06 (lora.ib.3.0.emb_layers.1.ld)
+PASS
+
+## tinyunet v02_tiny8c.gguf --backend vulkan (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=vulkan conv=f32 native=[] nodes: fwd=1511 total=3971
+compute buffer: 2.6 MiB
+out  rel_l2=2.085e-06
+loss ggml=1.272712 ref=1.272712 rel=1.873e-07
+lora grads: 126 tensors, overall rel_l2=3.308e-06, worst=8.346e-06 (lora.ib.3.0.emb_layers.1.ld)
+PASS
+
+## tinyunet v02_tiny16c.gguf --backend cpu (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=cpu conv=f32 native=[] nodes: fwd=1511 total=3971
+compute buffer: 10.4 MiB
+out  rel_l2=7.547e-07
+loss ggml=1.575029 ref=1.575029 rel=0.000e+00
+lora grads: 126 tensors, overall rel_l2=1.324e-06, worst=5.413e-06 (lora.mb.0.emb_layers.1.lu)
+PASS
+
+## tinyunet v02_tiny16c.gguf --backend vulkan (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=vulkan conv=f32 native=[] nodes: fwd=1511 total=3971
+compute buffer: 10.4 MiB
+out  rel_l2=2.000e-06
+loss ggml=1.575029 ref=1.575029 rel=1.514e-07
+lora grads: 126 tensors, overall rel_l2=3.675e-06, worst=9.435e-06 (lora.ob.1.0.emb_layers.1.lu)
+PASS
+
+## tinyunet v02_tiny8c.gguf --conv-f16 --backend cpu (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=cpu conv=f16 native=[] nodes: fwd=1534 total=4016
+compute buffer: 2.6 MiB
+out  rel_l2=5.750e-04
+loss ggml=1.272603 ref=1.272712 rel=8.598e-05
+lora grads: 126 tensors, overall rel_l2=6.123e-04, worst=1.500e-03 (lora.mb.1.tb0.attn1.to_k.ld)
+PASS
+
+## tinyunet v02_tiny8c.gguf --conv-f16 --backend vulkan (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=vulkan conv=f16 native=[] nodes: fwd=1534 total=4016
+compute buffer: 2.6 MiB
+out  rel_l2=6.237e-04
+loss ggml=1.272669 ref=1.272712 rel=3.419e-05
+lora grads: 126 tensors, overall rel_l2=6.638e-04, worst=1.719e-03 (lora.ob.1.1.tb0.attn1.to_q.lu)
+PASS
+
+## tinyunet v02_tiny8c.gguf --native all --backend cpu (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=cpu conv=f32 native=[all ] nodes: fwd=1075 total=3500
+compute buffer: 2.1 MiB
+out  rel_l2=1.508e-04
+loss ggml=1.272725 ref=1.272712 rel=9.554e-06
+lora grads: 126 tensors, overall rel_l2=1.993e-04, worst=4.869e-04 (lora.ib.1.0.out_layers.3.ld)
+PASS
+
+## tinyunet v02_tiny8c.gguf --native all --backend vulkan (vulkan은 GGML_VK_DISABLE_F16=1)
+backend=vulkan conv=f32 native=[all ] nodes: fwd=1075 total=3500
+compute buffer: 2.1 MiB
+out  rel_l2=2.077e-06
+loss ggml=1.272712 ref=1.272712 rel=2.810e-07
+lora grads: 126 tensors, overall rel_l2=3.342e-06, worst=8.583e-06 (lora.ib.3.0.emb_layers.1.ld)
+PASS

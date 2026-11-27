@@ -1,0 +1,221 @@
+# v0.3 1024px fp16 + 손실 스케일링 학습 (v0.2 fp16 실패 실험과 같은 조건) — 2026-11-27
+명령: sdxl_lora --train trainer/data/dog1024 --steps 200 --lr 1e-4 --rank 8 --alpha 8 --conv-rank 0 --seed 1 --save-every 100 --ckpt --native all (GGML_VK_DISABLE_F16 없음 → 자동 dynamic)
+ggml_vulkan: Found 1 Vulkan devices:
+ggml_vulkan: 0 = AMD Radeon Graphics (RADV REMBRANDT) (radv) | uma: 1 | rebar: 1 | fp16: 1 | bf16: 0 | fp4: 0 | warp size: 32 | shared memory: 65536 | int dot: 1 | matrix cores: none
+[ckpt] 샘플 5개, 잠재값 128x128 (1024px)
+UNet 가중치: 1680개, 4900.1 MiB (Vulkan0)
+가중치 로드 6.7s
+LoRA: 모듈 560개 (어텐션 560, ResBlock/샘플러 0), rank 8 alpha 8, conv_rank 0 conv_alpha 0, 파라미터 11.61M (ResBlock 쪽 0.00M)
+[ckpt] 블록 20개, 블록 출력+기울기 저장 505.0 MiB, 영구 버퍼 550.4 MiB
+[ckpt] 역전파 블록 16개 (LoRA 없는 앞 블록은 생략), 지원 안 되는 노드 0
+[ckpt] 계산 버퍼 2607.1 MiB (그래프 19개 공유), GTT 7246 MiB
+손실 스케일링: dynamic, S=32768 (fp16 행렬곱 켜짐)
+step    1  t=558  loss 0.03886  ema 0.03886  39.79s (fwd 8.70 bwd 31.00)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step    2  t=516  loss 0.05199  ema 0.03951  39.62s (fwd 8.60 bwd 30.93)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step    3  t= 59  loss 0.28752  ema 0.05191  39.58s (fwd 8.60 bwd 30.88)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step    4  t=533  loss 0.04370  ema 0.05150  39.65s (fwd 8.60 bwd 30.96)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step    5  t=935  loss 0.00347  ema 0.04910  39.57s (fwd 8.60 bwd 30.87)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step    6  t=388  loss 0.11452  ema 0.05237  39.56s (fwd 8.60 bwd 30.87)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step    7  t=340  loss 0.12963  ema 0.05624  51.07s (fwd 12.24 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step    8  t=850  loss 0.00544  ema 0.05370  51.08s (fwd 12.24 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step    9  t=823  loss 0.00626  ema 0.05132  51.09s (fwd 12.23 bwd 38.77)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   10  t=353  loss 0.12222  ema 0.05487  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   11  t=625  loss 0.02951  ema 0.05360  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   12  t=334  loss 0.12784  ema 0.05731  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   13  t=766  loss 0.01145  ema 0.05502  51.01s (fwd 12.22 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   14  t=287  loss 0.16424  ema 0.06048  51.08s (fwd 12.23 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   15  t=382  loss 0.10050  ema 0.06248  51.04s (fwd 12.22 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   16  t=805  loss 0.00769  ema 0.05974  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   17  t=500  loss 0.05669  ema 0.05959  51.09s (fwd 12.23 bwd 38.77)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   18  t=340  loss 0.12722  ema 0.06297  51.08s (fwd 12.23 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   19  t= 98  loss 0.31075  ema 0.07536  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   20  t=145  loss 0.28701  ema 0.08594  51.09s (fwd 12.23 bwd 38.77)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   21  t=487  loss 0.06730  ema 0.08501  51.08s (fwd 12.23 bwd 38.77)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   22  t=715  loss 0.01419  ema 0.08147  51.05s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   23  t=777  loss 0.00870  ema 0.07783  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   24  t=606  loss 0.02751  ema 0.07532  51.07s (fwd 12.22 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   25  t=916  loss 0.00314  ema 0.07171  51.14s (fwd 12.24 bwd 38.81)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   26  t=585  loss 0.03360  ema 0.06980  51.06s (fwd 12.24 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   27  t=782  loss 0.00961  ema 0.06679  51.04s (fwd 12.22 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   28  t=339  loss 0.12262  ema 0.06958  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   29  t=336  loss 0.13054  ema 0.07263  51.04s (fwd 12.22 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   30  t=691  loss 0.01544  ema 0.06977  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   31  t=659  loss 0.01946  ema 0.06726  51.07s (fwd 12.22 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   32  t=696  loss 0.01864  ema 0.06482  50.99s (fwd 12.23 bwd 38.67)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   33  t=741  loss 0.01132  ema 0.06215  51.04s (fwd 12.22 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   34  t=155  loss 0.27903  ema 0.07299  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   35  t=690  loss 0.01633  ema 0.07016  51.05s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   36  t=411  loss 0.08528  ema 0.07092  51.02s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   37  t=335  loss 0.13119  ema 0.07393  51.03s (fwd 12.22 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   38  t=113  loss 0.31084  ema 0.08578  51.03s (fwd 12.22 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   39  t= 34  loss 0.22749  ema 0.09286  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   40  t=929  loss 0.00272  ema 0.08835  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   41  t=791  loss 0.00809  ema 0.08434  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   42  t=794  loss 0.00732  ema 0.08049  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   43  t= 57  loss 0.29295  ema 0.09111  51.05s (fwd 12.22 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   44  t= 39  loss 0.24900  ema 0.09901  51.05s (fwd 12.22 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   45  t=535  loss 0.04308  ema 0.09621  51.05s (fwd 12.22 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   46  t=561  loss 0.03962  ema 0.09338  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   47  t= 27  loss 0.21673  ema 0.09955  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   48  t=955  loss 0.00206  ema 0.09467  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   49  t=765  loss 0.01107  ema 0.09049  51.07s (fwd 12.22 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   50  t= 60  loss 0.29193  ema 0.10057  51.06s (fwd 12.22 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   51  t=679  loss 0.02047  ema 0.09656  51.02s (fwd 12.22 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   52  t=670  loss 0.02138  ema 0.09280  51.07s (fwd 12.22 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   53  t=259  loss 0.18254  ema 0.09729  47.73s (fwd 12.23 bwd 35.41)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   54  t=305  loss 0.15015  ema 0.09993  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   55  t=729  loss 0.01170  ema 0.09552  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   56  t=879  loss 0.00376  ema 0.09093  51.09s (fwd 12.23 bwd 38.77)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   57  t=353  loss 0.13305  ema 0.09304  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   58  t= 74  loss 0.30663  ema 0.10372  51.02s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   59  t=122  loss 0.29548  ema 0.11331  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   60  t=330  loss 0.12892  ema 0.11409  51.04s (fwd 12.22 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   61  t=314  loss 0.14093  ema 0.11543  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   62  t=562  loss 0.03714  ema 0.11151  51.00s (fwd 12.23 bwd 38.69)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   63  t=590  loss 0.03200  ema 0.10754  51.03s (fwd 12.22 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   64  t=215  loss 0.22085  ema 0.11320  51.02s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   65  t=991  loss 0.00142  ema 0.10762  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   66  t=170  loss 0.25677  ema 0.11507  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   67  t=651  loss 0.02089  ema 0.11036  51.02s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   68  t=296  loss 0.15747  ema 0.11272  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   69  t=773  loss 0.00806  ema 0.10749  51.03s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   70  t=699  loss 0.01447  ema 0.10284  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   71  t=801  loss 0.00673  ema 0.09803  51.08s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   72  t=686  loss 0.01913  ema 0.09409  51.08s (fwd 12.23 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   73  t=504  loss 0.05422  ema 0.09209  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   74  t=182  loss 0.24720  ema 0.09985  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   75  t= 94  loss 0.31423  ema 0.11057  51.05s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   76  t=770  loss 0.00849  ema 0.10546  51.07s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   77  t=404  loss 0.09037  ema 0.10471  50.97s (fwd 12.22 bwd 38.65)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   78  t=562  loss 0.03903  ema 0.10142  50.26s (fwd 12.22 bwd 37.95)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   79  t=533  loss 0.04589  ema 0.09865  50.98s (fwd 12.22 bwd 38.67)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   80  t=435  loss 0.07640  ema 0.09753  51.10s (fwd 12.23 bwd 38.78)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   81  t=330  loss 0.13373  ema 0.09934  50.99s (fwd 12.23 bwd 38.68)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   82  t=966  loss 0.00190  ema 0.09447  51.01s (fwd 12.22 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   83  t=946  loss 0.00255  ema 0.08988  51.01s (fwd 12.22 bwd 38.69)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   84  t=144  loss 0.27824  ema 0.09929  51.06s (fwd 12.22 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   85  t=869  loss 0.00365  ema 0.09451  51.08s (fwd 12.23 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   86  t=286  loss 0.15704  ema 0.09764  51.05s (fwd 12.22 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   87  t= 45  loss 0.28056  ema 0.10678  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   88  t=796  loss 0.00713  ema 0.10180  51.04s (fwd 12.22 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   89  t=613  loss 0.02776  ema 0.09810  51.04s (fwd 12.22 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   90  t=616  loss 0.02624  ema 0.09451  51.04s (fwd 12.22 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   91  t=230  loss 0.20936  ema 0.10025  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   92  t=200  loss 0.23180  ema 0.10683  51.00s (fwd 12.22 bwd 38.69)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step   93  t=373  loss 0.10218  ema 0.10659  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step   94  t=134  loss 0.29321  ema 0.11592  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   95  t=107  loss 0.30891  ema 0.12557  51.04s (fwd 12.22 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step   96  t=377  loss 0.11947  ema 0.12527  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   97  t=297  loss 0.17294  ema 0.12765  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step   98  t=590  loss 0.03203  ema 0.12287  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step   99  t=495  loss 0.05591  ema 0.11952  51.08s (fwd 12.23 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  100  t=199  loss 0.25580  ema 0.12634  51.03s (fwd 12.22 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+저장: out/v03/dog1024_fp16_ls_s100.safetensors (1680 텐서, step 100)
+step  101  t=549  loss 0.04105  ema 0.12207  50.99s (fwd 12.22 bwd 38.68)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  102  t= 93  loss 0.31315  ema 0.13163  51.01s (fwd 12.22 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  103  t=961  loss 0.00184  ema 0.12514  51.06s (fwd 12.22 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  104  t= 70  loss 0.30311  ema 0.13404  51.01s (fwd 12.22 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  105  t=518  loss 0.05624  ema 0.13015  51.05s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  106  t= 13  loss 0.18470  ema 0.13287  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  107  t=795  loss 0.00689  ema 0.12658  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  108  t=941  loss 0.00205  ema 0.12035  50.99s (fwd 12.22 bwd 38.68)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  109  t=940  loss 0.00257  ema 0.11446  51.03s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  110  t=983  loss 0.00155  ema 0.10881  51.08s (fwd 12.22 bwd 38.77)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  111  t=790  loss 0.00833  ema 0.10379  50.99s (fwd 12.22 bwd 38.68)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  112  t=179  loss 0.27538  ema 0.11237  51.06s (fwd 12.22 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  113  t=431  loss 0.07593  ema 0.11055  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  114  t=265  loss 0.20110  ema 0.11508  51.06s (fwd 12.22 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  115  t=631  loss 0.02772  ema 0.11071  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  116  t=207  loss 0.25193  ema 0.11777  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  117  t=402  loss 0.09081  ema 0.11642  51.00s (fwd 12.23 bwd 38.68)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  118  t=493  loss 0.06432  ema 0.11382  51.08s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  119  t=103  loss 0.31077  ema 0.12366  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  120  t=796  loss 0.00708  ema 0.11783  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  121  t=660  loss 0.01993  ema 0.11294  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  122  t=406  loss 0.10214  ema 0.11240  51.10s (fwd 12.24 bwd 38.78)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  123  t=378  loss 0.10576  ema 0.11207  51.05s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  124  t=337  loss 0.12686  ema 0.11281  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  125  t= 83  loss 0.30985  ema 0.12266  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  126  t= 51  loss 0.27931  ema 0.13049  51.08s (fwd 12.24 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  127  t=868  loss 0.00435  ema 0.12418  51.08s (fwd 12.24 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  128  t=294  loss 0.15287  ema 0.12562  51.06s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  129  t=696  loss 0.01597  ema 0.12014  51.08s (fwd 12.24 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  130  t=668  loss 0.01925  ema 0.11509  51.04s (fwd 12.24 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  131  t=767  loss 0.00877  ema 0.10978  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  132  t=436  loss 0.07539  ema 0.10806  51.11s (fwd 12.23 bwd 38.79)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  133  t=779  loss 0.00825  ema 0.10307  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  134  t=505  loss 0.05975  ema 0.10090  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  135  t= 28  loss 0.19936  ema 0.10582  51.05s (fwd 12.24 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  136  t=586  loss 0.03286  ema 0.10217  51.08s (fwd 12.24 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  137  t= 65  loss 0.29795  ema 0.11196  51.01s (fwd 12.23 bwd 38.69)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  138  t= 59  loss 0.28818  ema 0.12077  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  139  t=313  loss 0.13746  ema 0.12161  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  140  t=572  loss 0.04066  ema 0.11756  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  141  t=536  loss 0.04449  ema 0.11391  51.08s (fwd 12.23 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  142  t=780  loss 0.00841  ema 0.10863  51.11s (fwd 12.24 bwd 38.78)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  143  t=116  loss 0.29412  ema 0.11791  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  144  t=579  loss 0.03176  ema 0.11360  51.05s (fwd 12.24 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  145  t=730  loss 0.01182  ema 0.10851  51.05s (fwd 12.24 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  146  t=934  loss 0.00237  ema 0.10320  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  147  t=832  loss 0.00531  ema 0.09831  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  148  t=198  loss 0.22701  ema 0.10474  51.06s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  149  t=221  loss 0.20939  ema 0.10998  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  150  t=642  loss 0.02132  ema 0.10554  51.01s (fwd 12.23 bwd 38.68)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  151  t=609  loss 0.02776  ema 0.10165  51.05s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  152  t=267  loss 0.17758  ema 0.10545  51.14s (fwd 12.23 bwd 38.81)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  153  t=694  loss 0.01575  ema 0.10097  51.07s (fwd 12.24 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  154  t=212  loss 0.21672  ema 0.10675  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  155  t=829  loss 0.00504  ema 0.10167  51.06s (fwd 12.24 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  156  t=748  loss 0.01019  ema 0.09709  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  157  t=304  loss 0.14911  ema 0.09969  51.07s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  158  t=148  loss 0.30119  ema 0.10977  51.06s (fwd 12.24 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  159  t=725  loss 0.01220  ema 0.10489  51.14s (fwd 12.23 bwd 38.82)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  160  t= 84  loss 0.31164  ema 0.11523  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  161  t=268  loss 0.17539  ema 0.11824  50.99s (fwd 12.23 bwd 38.68)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  162  t= 83  loss 0.30600  ema 0.12762  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  163  t=532  loss 0.04576  ema 0.12353  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  164  t=556  loss 0.03626  ema 0.11917  51.07s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  165  t=943  loss 0.00222  ema 0.11332  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  166  t=901  loss 0.00338  ema 0.10782  51.10s (fwd 12.24 bwd 38.78)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  167  t=346  loss 0.11649  ema 0.10826  51.08s (fwd 12.22 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  168  t=542  loss 0.04284  ema 0.10499  51.07s (fwd 12.24 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  169  t=935  loss 0.00220  ema 0.09985  51.03s (fwd 12.22 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  170  t=357  loss 0.10907  ema 0.10031  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  171  t=662  loss 0.01918  ema 0.09625  51.04s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  172  t= 97  loss 0.30460  ema 0.10667  51.02s (fwd 12.22 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  173  t=781  loss 0.00928  ema 0.10180  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  174  t=607  loss 0.03235  ema 0.09833  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  175  t=757  loss 0.01015  ema 0.09392  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  176  t=624  loss 0.02510  ema 0.09048  51.02s (fwd 12.23 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  177  t=578  loss 0.03201  ema 0.08756  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  178  t=306  loss 0.14138  ema 0.09025  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  179  t=104  loss 0.30141  ema 0.10080  51.11s (fwd 12.23 bwd 38.78)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  180  t=869  loss 0.00385  ema 0.09596  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  181  t=680  loss 0.01999  ema 0.09216  51.02s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  182  t=113  loss 0.30299  ema 0.10270  51.08s (fwd 12.23 bwd 38.76)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  183  t=981  loss 0.00115  ema 0.09762  51.02s (fwd 12.23 bwd 38.69)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  184  t=141  loss 0.28123  ema 0.10680  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  185  t=999  loss 0.00098  ema 0.10151  51.00s (fwd 12.23 bwd 38.68)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  186  t=664  loss 0.02216  ema 0.09754  51.01s (fwd 12.23 bwd 38.69)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  187  t=135  loss 0.28383  ema 0.10686  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  188  t=563  loss 0.03696  ema 0.10336  51.06s (fwd 12.23 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=32768
+step  189  t=766  loss 0.00916  ema 0.09865  51.03s (fwd 12.24 bwd 38.70)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  190  t=226  loss 0.20731  ema 0.10409  51.08s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  191  t=489  loss 0.06569  ema 0.10217  51.03s (fwd 12.22 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  192  t=781  loss 0.00791  ema 0.09745  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  193  t=484  loss 0.05544  ema 0.09535  51.05s (fwd 12.22 bwd 38.74)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  194  t=111  loss 0.30304  ema 0.10574  51.05s (fwd 12.23 bwd 38.73)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  195  t=878  loss 0.00310  ema 0.10061  51.07s (fwd 12.23 bwd 38.75)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=32768
+step  196  t=969  loss 0.00144  ema 0.09565  51.00s (fwd 12.23 bwd 38.68)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  197  t=760  loss 0.00968  ema 0.09135  51.05s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+step  198  t=311  loss 0.14154  ema 0.09386  51.00s (fwd 12.23 bwd 38.67)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  199  t=146  loss 0.30334  ema 0.10433  51.03s (fwd 12.23 bwd 38.71)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+loss-scale: 200스텝 연속 정상 → S=65536
+step  200  t=266  loss 0.19599  ema 0.10892  51.04s (fwd 12.23 bwd 38.72)  buf 2607 MiB  GTT 7257 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+평균 스텝 시간 (첫 스텝 제외): 50.74s
+평균 손실: 0.10518
+손실 스케일: 마지막 S=65536, 건너뛴 스텝 0 (AdamW 갱신 200번)
+저장: out/v03/dog1024_fp16_ls.safetensors (1680 텐서, step 200)
+GUARD done rc=0 peak_sum=9213MiB
+
+메모리: GUARD done rc=0 peak_sum=9213MiB

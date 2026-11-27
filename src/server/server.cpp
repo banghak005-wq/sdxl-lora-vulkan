@@ -10,8 +10,9 @@
 //   GET  /api/status    {"state": idle|running|done|failed|stopped, "args": [...], "step": n, "steps": n,
 //                        "loss": f, "ema": f, "sec_per_step": f, "eta_sec": f, "exit_code": n, "log_tail": [...]}
 //   POST /api/train     JSON {"data": "...", "out": "...", "steps": 200, "lr": 1e-4, "rank": 8, "alpha": 8,
+//                        "conv_rank": 0, "conv_alpha": (기본 conv_rank),
 //                        "seed": 42, "save_every": 0, "ckpt": true, "native": "all", "resume": "...",
-//                        "model": "...", "fp16": false, "t_min": 0, "t_max": 999}
+//                        "model": "...", "fp16": true, "t_min": 0, "t_max": 999}
 //   POST /api/stop      실행 중인 작업에 SIGTERM
 //   GET  /api/log       전체 로그 (text/plain)
 //   GET  /files/<경로>  --root 안의 파일 받기 (LoRA, 이미지 등)
@@ -142,6 +143,8 @@ static std::string start_job(const json & req, int & http_code) {
     add_num("--lr", "lr", 1e-4, "%g");
     add_num("--rank", "rank", 8, "%.0f");
     add_num("--alpha", "alpha", 8, "%g");
+    add_num("--conv-rank", "conv_rank", 0, "%.0f");  // LoCon (0 = 끔)
+    if (req.contains("conv_alpha")) add_num("--conv-alpha", "conv_alpha", 0, "%g");  // 없으면 학습기 기본 = conv_rank
     add_num("--seed", "seed", 42, "%.0f");
     add_num("--save-every", "save_every", 0, "%.0f");
     add_num("--t-min", "t_min", 0, "%.0f");
@@ -162,7 +165,20 @@ static std::string start_job(const json & req, int & http_code) {
         args.push_back(std::string("--") + k);
         args.push_back(p.string());
     }
-    const bool fp16 = req.value("fp16", false);
+    // v0.3 손실 스케일링: "dynamic" 또는 양수. 없으면 학습기 자동 (fp16이면 dynamic, 아니면 1)
+    if (req.contains("loss_scale")) {
+        const auto & v = req["loss_scale"];
+        if (v.is_string() && v.get<std::string>() == "dynamic") {
+            args.push_back("--loss-scale");
+            args.push_back("dynamic");
+        } else if (v.is_number() && v.get<double>() > 0) {
+            add_num("--loss-scale", "loss_scale", 1, "%g");
+        } else {
+            http_code = 400;
+            return "loss_scale: \"dynamic\" 또는 양수";
+        }
+    }
+    const bool fp16 = req.value("fp16", true);  // v0.3: 기본 fp16 + 손실 스케일링 (false = f32)
 
     std::lock_guard<std::mutex> lk(g_mu);
     if (g_job.state == "running" || g_job.state == "stopping") {
@@ -186,7 +202,7 @@ static std::string start_job(const json & req, int & http_code) {
         dup2(fd, 2);
         close(fd);
         if (chdir(g_root.c_str()) != 0) _exit(126);
-        if (!fp16) setenv("GGML_VK_DISABLE_F16", "1", 1);  // 기본은 검증된 f32 경로
+        if (!fp16) setenv("GGML_VK_DISABLE_F16", "1", 1);  // fp16:false면 f32 경로 (v0.2와 비트 일치)
         std::vector<char *> av;
         for (auto & a : args) av.push_back(const_cast<char *>(a.c_str()));
         av.push_back(nullptr);

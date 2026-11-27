@@ -1,0 +1,50 @@
+# v0.3 dynamic 넘침 → S 감소 경로 (시작 S=2^28 일부러 크게, window 10, 256px 30스텝) — 2026-11-27
+[ckpt] 샘플 1개, 잠재값 32x32 (256px)
+UNet 가중치: 1680개, 4900.1 MiB (Vulkan0)
+가중치 로드 3.9s
+LoRA: 모듈 626개 (어텐션 560, ResBlock/샘플러 66), rank 8 alpha 8, conv_rank 4 conv_alpha 4, 파라미터 13.50M (ResBlock 쪽 1.89M)
+[ckpt] 블록 20개, 블록 출력+기울기 저장 31.6 MiB, 영구 버퍼 83.7 MiB
+[ckpt] 역전파 블록 19개 (LoRA 없는 앞 블록은 생략), 지원 안 되는 노드 0
+[ckpt] 계산 버퍼 161.8 MiB (그래프 22개 공유), GTT 4334 MiB
+손실 스케일링: dynamic, S=2.68435e+08 (fp16 행렬곱 켜짐)
+overflow step 1: 기울기 NaN/Inf → 갱신 건너뜀, S=1.34218e+08
+step    1  t=193  loss 0.39431  ema 0.39431  2.79s (fwd 0.66 bwd 2.03)  buf 162 MiB  GTT 4340 MiB  [fox]  S=2.68435e+08
+overflow step 2: 기울기 NaN/Inf → 갱신 건너뜀, S=6.71089e+07
+step    2  t=404  loss 0.21111  ema 0.38515  2.71s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4340 MiB  [fox]  S=1.34218e+08
+overflow step 3: 기울기 NaN/Inf → 갱신 건너뜀, S=3.35544e+07
+step    3  t=914  loss 0.01626  ema 0.36671  2.71s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4340 MiB  [fox]  S=6.71089e+07
+overflow step 4: 기울기 NaN/Inf → 갱신 건너뜀, S=1.67772e+07
+step    4  t=215  loss 0.39858  ema 0.36830  2.71s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4340 MiB  [fox]  S=3.35544e+07
+step    5  t=808  loss 0.03622  ema 0.35170  2.73s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+overflow step 6: 기울기 NaN/Inf → 갱신 건너뜀, S=8.38861e+06
+step    6  t=300  loss 0.31247  ema 0.34973  2.71s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step    7  t=361  loss 0.23859  ema 0.34418  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+step    8  t=542  loss 0.11921  ema 0.33293  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+step    9  t=312  loss 0.20770  ema 0.32667  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+step   10  t=146  loss 0.31774  ema 0.32622  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+step   11  t=279  loss 0.20767  ema 0.32029  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+step   12  t=155  loss 0.26376  ema 0.31747  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+step   13  t=159  loss 0.28023  ema 0.31560  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+step   14  t=704  loss 0.02999  ema 0.30132  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+step   15  t=496  loss 0.07854  ema 0.29018  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+loss-scale: 10스텝 연속 정상 → S=1.67772e+07
+step   16  t=115  loss 0.29306  ema 0.29033  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=8.38861e+06
+step   17  t=285  loss 0.17145  ema 0.28438  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   18  t=683  loss 0.04004  ema 0.27217  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   19  t=382  loss 0.11424  ema 0.26427  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   20  t=830  loss 0.01187  ema 0.25165  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   21  t=839  loss 0.01183  ema 0.23966  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   22  t=763  loss 0.01909  ema 0.22863  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   23  t=123  loss 0.25893  ema 0.23015  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   24  t=205  loss 0.22592  ema 0.22994  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   25  t=297  loss 0.15218  ema 0.22605  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   26  t=753  loss 0.02166  ema 0.21583  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   27  t=830  loss 0.01449  ema 0.20576  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   28  t=927  loss 0.00590  ema 0.19577  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   29  t=981  loss 0.00310  ema 0.18613  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+step   30  t=395  loss 0.11088  ema 0.18237  2.72s (fwd 0.61 bwd 2.01)  buf 162 MiB  GTT 4341 MiB  [fox]  S=1.67772e+07
+평균 스텝 시간 (첫 스텝 제외): 2.72s
+평균 손실: 0.15223
+손실 스케일: 마지막 S=1.67772e+07, 건너뛴 스텝 5 (AdamW 갱신 25번)
+저장: out/v03/t6_backoff.safetensors (1878 텐서, step 30)
+GUARD done rc=0 peak_sum=5750MiB

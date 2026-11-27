@@ -1,0 +1,40 @@
+# 1024px 200스텝 LoRA 비교: f32(v0.2) / fp16 S=1(v0.2) / fp16 손실 스케일링(v0.3)
+dog1024_lora.safetensors: up |w| 평균 2.015e-03, 최대 1.533e-02, up이 전부 0인 모듈 0/560, down |w| 평균 1.371e-02
+dog1024_fp16_lora.safetensors: up |w| 평균 4.223e-05, 최대 8.395e-03, up이 전부 0인 모듈 486/560, down |w| 평균 1.319e-02
+    첫 파일과 공통 모듈 560개의 up 방향 유사도(cos) 0.000, 크기 비 0.098
+dog1024_fp16_ls.safetensors: up |w| 평균 2.011e-03, 최대 1.534e-02, up이 전부 0인 모듈 0/560, down |w| 평균 1.371e-02
+    첫 파일과 공통 모듈 560개의 up 방향 유사도(cos) 0.999, 크기 비 0.999
+
+# sd.cpp 1024px 생성 (seed 42, 20스텝, at_runtime)
+== a photo of sks dog in a bucket<lora:dog1024_fp16ls:1> -> out/eval/bucket1024_dog1024_fp16ls_w1_1024_s42.png
+[I] diffusion: (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/out/dog1024_fp16ls.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=9271MiB
+== a photo of sks dog on a sunny beach<lora:dog1024_fp16ls:1> -> out/eval/beach1024_dog1024_fp16ls_w1_1024_s42.png
+[I] diffusion: (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/out/dog1024_fp16ls.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=8523MiB
+== a photo of sks dog in a snowy forest<lora:dog1024_fp16ls:1> -> out/eval/snow1024_dog1024_fp16ls_w1_1024_s42.png
+[I] diffusion: (1680 / 1680) LoRA tensors have been applied, lora_file_path = <work>/out/dog1024_fp16ls.safetensors --- lora.hpp:1135
+GUARD done rc=0 peak_sum=8567MiB
+beach1024_base_1024_s42.png
+beach1024_dog1024_fp16_lora_w1_1024_s42.png
+beach1024_dog1024_fp16ls_w1_1024_s42.png
+beach1024_dog1024_locon_w1_1024_s42.png
+beach1024_dog1024_lora_w1_1024_s42.png
+beach1024_dog_locon_w1_1024_s42.png
+beach1024_dog_lora_w1_1024_s42.png
+bucket1024_base_1024_s42.png
+bucket1024_dog1024_fp16_lora_w1_1024_s42.png
+bucket1024_dog1024_fp16ls_w1_1024_s42.png
+bucket1024_dog1024_locon_w1_1024_s42.png
+bucket1024_dog1024_lora_w1_1024_s42.png
+bucket1024_dog_locon_w1_1024_s42.png
+bucket1024_dog_lora_w1_1024_s42.png
+snow1024_base_1024_s42.png
+snow1024_dog1024_fp16_lora_w1_1024_s42.png
+snow1024_dog1024_fp16ls_w1_1024_s42.png
+snow1024_dog1024_locon_w1_1024_s42.png
+snow1024_dog1024_lora_w1_1024_s42.png
+snow1024_dog_locon_w1_1024_s42.png
+snow1024_dog_lora_w1_1024_s42.png
+
+[exited with code 0]

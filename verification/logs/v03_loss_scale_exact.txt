@@ -1,0 +1,20 @@
+# v0.3 손실 스케일 정확성 (f32 모드, GGML_VK_DISABLE_F16=1, selftest256 여우 1장, conv-rank 4) — 2026-11-27
+## grad-check (ckpt vs 전체 그래프, 2번째 스텝)
+S=1: [grad-check] step 2 t=193 loss ckpt 0.358406 / full 0.358406, LoRA 기울기 rel_l2 전체 7.473e-07 최악 2.323e-06 (lora.input_blocks.7.1.transformer_blocks.5.attn2.to_k.lora_down), ckpt 계산 버퍼 최대 1211.3 MiB
+S=1024: [grad-check] step 2 t=193 loss ckpt 0.358406 / full 0.358406, LoRA 기울기 rel_l2 전체 7.473e-07 최악 2.323e-06 (lora.input_blocks.7.1.transformer_blocks.5.attn2.to_k.lora_down), ckpt 계산 버퍼 최대 1211.3 MiB
+S=65536: [grad-check] step 2 t=193 loss ckpt 0.358406 / full 0.358406, LoRA 기울기 rel_l2 전체 7.473e-07 최악 2.323e-06 (lora.input_blocks.7.1.transformer_blocks.5.attn2.to_k.lora_down), ckpt 계산 버퍼 최대 1211.3 MiB
+
+## 20스텝 학습 (lr 1e-3) 결과 LoRA 비교 (기준: ckpt S=1)
+t2_ckpt_S1024.txt: 평균 손실: 0.15002
+t2_ckpt_S1.txt: 평균 손실: 0.15002
+t2_full_S1024.txt: 평균 손실: 0.15002
+t2_full_S1.txt: 평균 손실: 0.15002
+t2_v02_ckpt.txt: 평균 손실: 0.15002
+t2_ckpt_S1024.safetensors: 비트 일치 텐서 1878/1878, rel_l2 0.000e+00
+t2_v02_ckpt.safetensors: 비트 일치 텐서 1878/1878, rel_l2 0.000e+00
+t2_full_S1.safetensors: 비트 일치 텐서 626/1878, rel_l2 1.361e-06
+(전체 그래프끼리: S=1 vs S=1024)
+t2_full_S1024.safetensors: 비트 일치 텐서 1878/1878, rel_l2 0.000e+00
+
+## 함정 기록: 고치기 전 ckpt --grad-check --loss-scale 1024 → 오류: 기울기에 NaN/Inf (step 1, 고정 손실 스케일 S=1024.000000) → --loss-scale을 줄이거나 dynamic
+원인: 중간 블록 그래프 손실 기울기도 S로 설정 → 블록마다 S 곱해짐. 전체 그래프 SDXL_NAN_DEBUG(역전파 포함)는 비유한 값 없음: 비유한 값 없음 (노드 32746개)

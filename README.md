@@ -295,3 +295,4 @@ for_ai.md              design log and rationale (detailed, Korean)
 ## License
 [MIT](LICENSE) © 2026 [banghak005-wq](https://github.com/banghak005-wq). You may use, modify and redistribute it, including commercially, as long as the copyright notice is kept.
 `patches/` (ggml changes), `third_party/json.hpp`, `third_party/httplib.h` and the third-party code in the released binaries remain under their original authors' licenses. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for the list and full license texts.
+The example images and reference tensors are outputs of SDXL base 1.0 (CreativeML Open RAIL++-M). No model weights, training photos (diffusers/dog-example, photos by Alvan Nee on Unsplash) or trained LoRAs are included; see the "Models, data and generated content" section of THIRD_PARTY_LICENSES.md.

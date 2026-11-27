@@ -34,4 +34,9 @@ or linked into this project keeps its own license and copyright:
   - Vulkan-Hpp / Vulkan-Headers (compiled into the binaries only)
       Apache-2.0 OR MIT / Apache-2.0, Copyright 2015-2025 The Khronos Group Inc.
 
+Images and reference tensors under docs/ and verification/ are outputs of
+SDXL base 1.0 (CreativeML Open RAIL++-M); no model weights, training images or
+trained LoRAs are included. See the "Models, data and generated content"
+section of THIRD_PARTY_LICENSES.md.
+
 Full license texts and details: THIRD_PARTY_LICENSES.md

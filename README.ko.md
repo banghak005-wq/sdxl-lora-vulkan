@@ -293,3 +293,4 @@ for_ai.md              설계 과정과 근거 (AI/개발자용 상세 문서)
 ## 라이선스
 [MIT](LICENSE) © 2026 [banghak005-wq](https://github.com/banghak005-wq). 저작권 표시만 유지하면 상업적 이용·수정·재배포 모두 자유.
 `patches/`(ggml 수정분), `third_party/json.hpp`, `third_party/httplib.h`와 배포 실행 파일에 들어간 외부 코드는 각 원저작자의 라이선스를 따른다. 목록과 라이선스 전문은 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+예시 그림과 기준 텐서는 SDXL base 1.0(CreativeML Open RAIL++-M)의 출력물이다. 모델 가중치, 학습 사진(diffusers/dog-example, Unsplash의 Alvan Nee 사진), 학습한 LoRA는 포함하지 않는다. 자세한 내용은 THIRD_PARTY_LICENSES.md의 "Models, data and generated content" 절.

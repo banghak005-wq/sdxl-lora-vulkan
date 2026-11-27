@@ -178,6 +178,19 @@ The C headers (`vulkan_core.h` etc.) are "Copyright 2015-2025 The Khronos Group 
 
 ---
 
+## Models, data and generated content (not code; not in the binaries)
+
+No model weights, training images or trained LoRAs are distributed in this repository or in the release binaries. The following were used to produce the images and reference tensors that are included:
+
+| Item | License | How it appears here |
+|---|---|---|
+| [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) (UNet, VAE, CLIP text encoders) | CreativeML Open RAIL++-M | Not included. The images under `docs/images/` and `verification/*/images/`, and the reference tensors `verification/*/sdxl_ref*/*.npy`, are outputs computed with this model. Under the license the licensor claims no rights in generated outputs; their use remains subject to the license's use-based restrictions (Attachment A). |
+| [madebyollin/sdxl-vae-fp16-fix](https://huggingface.co/madebyollin/sdxl-vae-fp16-fix) | MIT | Not included. Used as the VAE when generating the images |
+| [diffusers/dog-example](https://huggingface.co/datasets/diffusers/dog-example) (5 photos; file names indicate photos by Alvan Nee on [Unsplash](https://unsplash.com/license)) | No license stated on the dataset page; Unsplash photos are under the Unsplash License | Not included. Only used as training data; the photos themselves are not redistributed |
+| [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) | MIT | Not included. Used as an external tool (`sd-cli`) to build the training cache and to generate images |
+
+---
+
 ## Apache License 2.0
 
 (applies to the Abseil-derived parts of nlohmann/json and to the Khronos Vulkan C headers)

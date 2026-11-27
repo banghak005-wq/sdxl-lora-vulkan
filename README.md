@@ -1,6 +1,6 @@
 **English** | [한국어](README.ko.md)
 
-# SDXL LoRA training on Vulkan — no CUDA, no ROCm (v0.3)
+# SDXL LoRA training on Vulkan — no CUDA, no ROCm (v0.4)
 
 **Train SDXL LoRAs on an AMD GPU without ROCm.** This project implements SDXL UNet training (forward, backward and AdamW) on top of [ggml](https://github.com/ggml-org/ggml) and runs it with **plain Vulkan**, so it works on GPUs that ROCm does not support, including integrated graphics. It was developed and tested on an **AMD Radeon 660M iGPU** (6 CUs, shared system memory).
 
@@ -11,13 +11,29 @@
 
 > The code and documentation in this repository were written by a Claude agent (Anthropic); the human author set the goals, made the decisions and judged the results. The full design log, including the mistakes, is in [for_ai.md](for_ai.md) (Korean).
 
-**New in v0.3: fp16 matmul training (loss scaling).** Up to v0.2, training with fp16 matrix multiplication silently failed (gradient underflow: the LoRA did not learn), so only f32 was usable.
+**New in v0.4: job-queue web server.** Queue up cache building, training and image generation and they run one after another. Leave it running, come back, and view and download the results in the browser. Kill a running job instantly, the queue survives restarts, temporary access tokens (`--token auto`), select and delete finished jobs. The server is a single C++ binary, so no Python is needed (see "3. Job-queue web server").
+
+v0.3 feature: **fp16 matmul training (loss scaling).** Up to v0.2, training with fp16 matrix multiplication silently failed (gradient underflow: the LoRA did not learn), so only f32 was usable.
 v0.3 adds dynamic loss scaling, and **fp16 training now produces practically the same LoRA as f32, 1.33× faster** (1024px, 200 steps: LoRA direction similarity 0.999, near-identical images; see "v0.3 results").
 It is enabled automatically when `GGML_VK_DISABLE_F16=1` is not set. f32 training (`GGML_VK_DISABLE_F16=1`) gives bit-identical results to v0.2.
 
 v0.2 feature: **convolution LoRA (LoCon)**. `--conv-rank N` also puts LoRA on the ResBlock and down/upsampling convolutions (same rules and file format as kohya `conv_dim`).
 Without the option it behaves exactly like v0.1 (verified: bit-identical training loss with the same seed).
 Also in v0.2: fixed a measurement error that made `tools/guard.sh` (memory guard) kill healthy jobs inside LXC (see section 5 of Usage).
+
+## v0.4 results: end to end through the job server
+With 5 dog photos, **build cache → train (512px, 500 steps) → generate 3 images** were queued at once and left alone. Everything ran through this server only.
+
+| Prompt | Without LoRA | LoRA trained through the server (512px, 500 steps, fp16) |
+|---|---|---|
+| `a photo of sks dog in a bucket` | ![](docs/images/bucket768_base.png) | ![](docs/images/bucket_v04_server_lora512.png) |
+| `a photo of sks dog on a sunny beach` | ![](docs/images/beach_base.png) | ![](docs/images/beach_v04_server_lora512.png) |
+| `a photo of sks dog in a snowy forest` | ![](docs/images/snow_base.png) | ![](docs/images/snow_v04_server_lora512.png) |
+
+- Training took 63 min (7.5 s/step, no overflows), 768px generation about 5 min per image, peak total memory 8.0 GiB. The trained corgi (big ears, white stripe on the face) appears and the scene in the prompt is followed. The orange background in the bucket image comes from the training photos (a limit of 5 photos at low resolution, the same as v0.1's 384px training)
+- **Same results through the server**: server-trained LoRA = CLI-trained LoRA **bit-identical**; server-generated image = image from running sd-cli directly, **pixel-identical**; the cache the server builds itself = the cache from the old Python script, **bit-identical**
+- **Kill**: killing a real training job ends the whole process group within 0.5 s and GPU memory (GTT) goes from 4.7 GiB back to 0
+- 56 server tests pass (with a fake trainer, so anyone can run them without a GPU). Details: [`verification/`](verification/README.md)
 
 ## v0.3 results: fp16 matmul training (loss scaling)
 The experiment that failed in v0.2 (5 dog images, 1024px, 200 steps, seed 1, rank 8) was repeated in v0.3 **under the same conditions**. Generation: sd.cpp, 1024px, seed 42.
@@ -32,7 +48,7 @@ The experiment that failed in v0.2 (5 dog images, 1024px, 200 steps, seed 1, ran
 - LoRA weights: v0.3 fp16 vs f32 up-weight direction similarity **0.999**, norm ratio 0.999, zero modules 0/560 (v0.2 fp16: similarity 0.000, zero modules 486/560)
 - Mean loss 0.10518 (f32 0.1051), no NaNs and no overflows, 50.7 s/step (f32 about 67.7 s → **1.33× faster**), same memory as f32 (peak total 9.2 GiB)
 - f32 training is bit-identical to v0.2 (the scale is a power of two, so it does not change f32 results)
-- Details: `verification/logs/v03_*.txt`, `for_ai.md` 1.5, 1.8, 2.13
+- Details: `verification/v0.3/logs/v03_*.txt`, `for_ai.md` 1.5, 1.8, 2.13
 
 ## v0.2 results: attention LoRA vs LoCon (same data, same seed, same training order)
 5 dog images, rank 8, lr 1e-4. LoCon only adds `--conv-rank 8 --conv-alpha 8` (initialization, timesteps and noise order are matched with the attention-only run, so the only difference is the convolution LoRA).
@@ -135,7 +151,7 @@ The cause is **gradient underflow** (the loss gradient is so small that it falls
 
 In the real 1024px runs the step time rose by about 15% after 20–40 steps and stayed there (not seen in a 1-hour 384px run; temperature and clocks were normal; cause unknown).
 
-Verification artifacts (logs, all generated images, reference data) are in [`verification/`](verification/README.md) (those of v0.1 and v0.2 in `verification/v0.1/` and `verification/v0.2/`). The trained LoRA files are not distributed.
+Verification artifacts (logs, all generated images, reference data) are in [`verification/`](verification/README.md) (those of earlier versions in `verification/v0.1/`, `verification/v0.2/` and `verification/v0.3/`). The trained LoRA files are not distributed.
 
 ## Requirements
 - Linux with a Vulkan 1.3 GPU driver (verified on AMD RADV). About 9 GiB or more of GPU-usable memory (for an iGPU, check the GTT size)
@@ -150,7 +166,7 @@ patches/get_ggml.sh ggml                 # fetch ggml (eeda9ec4) and apply this 
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_DIR=ggml
 cmake --build build -j4                  # build/sdxl_lora, build/sdxl_lora_server, build/tinyunet
 ```
-Prebuilt x86-64 Linux binaries (`sdxl_lora`, `sdxl_lora_server`) are in [Releases](../../releases) (ggml statically linked, built on glibc 2.41). Put them in `bin/` to match the example paths below. Runtime requirements: `libvulkan1`, `libgomp1`, `libstdc++6` and your GPU's Vulkan driver. On distributions with an older glibc, build from source.
+Prebuilt x86-64 Linux binaries (`sdxl_lora`, `sdxl_lora_server`) are in [Releases](../../releases) (ggml statically linked, built on glibc 2.41). Put them in `bin/` to match the example paths below. The v0.4 archive also contains `tools/guard.sh`, the memory guard the server uses (found automatically in `tools/` next to the binary). Runtime requirements: `libvulkan1`, `libgomp1`, `libstdc++6` and your GPU's Vulkan driver. On distributions with an older glibc, build from source.
 Build dependencies (Debian/Ubuntu): `build-essential cmake git glslc libvulkan-dev spirv-headers`. More on building, usage and troubleshooting: [for_ai.md](for_ai.md) 1.11–1.20.
 
 ## Run with Docker (v0.3)
@@ -182,6 +198,7 @@ docker run --rm $GPU $VOL -w /work sdxl-vulkan-env \
 ```
 - `$WORK/models/sd_xl_base_1.0.safetensors` must exist (the trainer's default model path is relative to the working folder). The server runs the trainer inside `--root` (= `/work`)
 - The data cache (Usage, section 1) needs stable-diffusion.cpp's `sd-cli`, which is not in this environment. Build the cache on the host and put it in `$WORK/cache/`
+- **The v0.4 server's cache and generate jobs** need sd-cli: mount the host's sd-cli and point to it (e.g. `-v /path/to/sd-cli:/opt/sd-cli:ro` plus the server argument `--sd-cli /opt/sd-cli`). Without it only training jobs work. Add `--token auto` if you expose it
 - `-p 127.0.0.1:8090:8090`: the server has no authentication, so it is exposed to the host only. `--host 0.0.0.0` inside the container is just for Docker's port mapping
 - `HOME=/work`: Mesa stores compiled GPU shaders in `$WORK/.cache/`, so later runs start faster
 - On distributions without a `render` group, use the group id of `/dev/dri/renderD128` for `--group-add` (check with `ls -ln /dev/dri`)
@@ -242,17 +259,67 @@ GGML_VK_DISABLE_F16=1 build/sdxl_lora --train cache/dog1024 --ckpt --native all 
   - LoCon modules: `lora_unet_input_blocks_1_0_in_layers_2.lora_down.weight` `[rank, in, 3, 3]`, `.lora_up.weight` `[out, rank, 1, 1]`, metadata `ss_network_args = {"conv_dim", "conv_alpha"}`. stable-diffusion.cpp loads 1878/1878 tensors (verified)
   - `--resume` needs the same `--rank/--alpha/--conv-rank/--conv-alpha` as the file
 
-### 3. Train (server)
-An HTTP job manager that runs the CLI as a child process. One job at a time; when training ends the process exits and the GPU memory is released.
+### 3. Job-queue web server (v0.4)
+A web server that runs cache building, training and image generation **one at a time from a queue**. Queue up several jobs, go do something else, and come back to the results.
+- **A single C++ binary** (`sdxl_lora_server`, about 0.9 MB). No Python or other runtime needed. It uses `sdxl_lora` (training) and `sd-cli` from stable-diffusion.cpp (cache and generation)
+- Jobs never run concurrently (GPU memory). Each job is a separate process, so GPU memory is released as soon as it ends or is stopped
+- The queue is saved to `<root>/jobs/queue.json`: queued jobs survive a server restart and continue (a job that was running is marked "interrupted" and its leftover processes are cleaned up)
+- Web UI: add jobs (cache / train / generate / **all in one**: photo folder → cache → train → preview images), queue with progress and time left, logs, finished-jobs archive (download LoRAs, images, logs; select and delete), gallery of generated images, Korean/English
+- **Stopping**: cancel queued jobs, stop the running job (SIGTERM, then SIGKILL if it has not exited within 10 s), **kill immediately** (SIGKILL), cancel all queued, pause the queue. The job's child processes (memory guard, sd-cli, …) are terminated together as a process group
+- On AMD GPUs a memory guard (`tools/guard.sh`) is attached to every job automatically (`--guard auto|on|off`, limit `--guard-limit-mib`)
+
 ```sh
-build/sdxl_lora_server --root /path/to/workdir --port 8090     # uses sdxl_lora from the same folder (or --cli)
-curl -X POST localhost:8090/api/train -d '{"data":"cache/dog1024","out":"out/dog.safetensors","steps":200,"save_every":100}'
-curl localhost:8090/api/status       # step, loss, ema, sec_per_step, eta_sec, log_tail
-curl -X POST localhost:8090/api/stop
-curl -O localhost:8090/files/out/dog.safetensors
+build/sdxl_lora_server --root /path/to/work --sd-cli /path/to/sd-cli --token auto
+#   접속 토큰 (이번 실행에만 유효): 9ryjewpxe64h6nbe7xapg8ftfxc24c8i      <- access token, valid for this run only
+#   바로 열기: http://127.0.0.1:8090/?token=9ryjewpxe64h6nbe7xapg8ftfxc24c8i
 ```
-Open `http://localhost:8090/` in a browser for a progress page. Paths in requests are restricted to `--root`. **There is no authentication, so only listen on the default 127.0.0.1.**
-`/api/train` JSON keys: `data out steps lr rank alpha conv_rank (v0.2, default 0) conv_alpha (v0.2, default conv_rank) seed save_every ckpt (default true) native (default "all") resume model fp16 (**v0.3 default true**: fp16 matmul + automatic loss scaling, 1.33× faster; false = f32, same result as v0.2) loss_scale (v0.3, "dynamic" or a positive number; if absent the trainer decides) t_min t_max`
+- Put `models/sd_xl_base_1.0.safetensors`, `models/sdxl_vae.safetensors` (or use `--model`, `--vae`) and your photo folders inside the working folder (`--root`). All paths in requests are restricted to `--root`
+- The trainer is `sdxl_lora` next to the server binary (or `--cli`). Without `--sd-cli` only training jobs are available
+- Common generation arguments: `--sd-args` (default `--vae-tiling --flash-attn auto,vae=off --lora-apply-mode at_runtime`: works around a RADV crash in the VAE flash-attention shader and saves LoRA memory). CPU threads for cache jobs: `--threads`
+- The server's console messages are in Korean
+
+**Replacing or turning off the web UI** (if you build your own frontend)
+| Option | Behavior |
+|---|---|
+| `--ui builtin` (default) | built-in web UI |
+| `--ui off` | **API only**, no UI. `/` returns a JSON description of the API |
+| `--ui <folder>` | serves the static files in that folder (`index.html`, js, css, …) at `/`, so your own frontend runs from the same server |
+| `--cors <origin>` | allows a frontend served from another origin to call this API (e.g. `--cors http://localhost:5173`, or `"*"`) |
+
+- The token only protects `/api/…` and `/files/…`. Frontend files load without it; your frontend sends `Authorization: Bearer <token>` (or the `sdxl_token` cookie) when calling the API
+- The built-in UI (`src/server/page.h`, a single HTML page) doubles as an example of using the API
+
+**Access and security**: by default the server listens **on this machine only (127.0.0.1)**. To reach it from elsewhere (phone, another PC), pick one of these yourself.
+| Method | Example | Notes |
+|---|---|---|
+| Cloudflare quick tunnel | `cloudflared tunnel --url http://127.0.0.1:8090` → the printed `https://….trycloudflare.com` | No account needed. **Anyone with the URL can connect → always use `--token`** |
+| Tailscale | `http://<this machine's tailscale name>:8090` from a device in the same tailnet (server with `--host 0.0.0.0` or the tailscale IP) | Not visible outside the tailnet. `--token` still recommended |
+| Router port forwarding | external port → this machine's 8090 (server with `--host 0.0.0.0`) | Exposed to the whole internet → **`--token` required**, ideally behind an HTTPS reverse proxy |
+
+- `--token auto`: generates a new temporary token (32 characters) at every start and prints it. The web UI asks for it on the first screen, and `/api` and `/files` return 401 without it. Opening `?token=…` logs in directly (the token is removed from the address bar)
+- `--token <your value>` or the `SDXL_SERVER_TOKEN` environment variable (keeps it out of the command line). For the API: `Authorization: Bearer <token>`
+- The token travels over plain HTTP. When exposing the server to the internet, use HTTPS (Cloudflare tunnels are HTTPS by default)
+
+**API** (JSON; with a token add `-H "Authorization: Bearer <token>"`)
+```sh
+curl -X POST localhost:8090/api/jobs -d '{"type":"cache","src":"dataset/dog","size":512,"caption":"a photo of sks dog"}'
+curl -X POST localhost:8090/api/jobs -d '{"type":"train","data":"cache/dog_512","steps":500,"out":"out/dog.safetensors"}'
+curl -X POST localhost:8090/api/jobs -d '{"type":"generate","prompt":"a photo of sks dog on a sunny beach","lora":"out/dog.safetensors","width":768,"height":768}'
+curl localhost:8090/api/jobs                       # list + progress (step, steps, loss, sec_per_step, eta_sec)
+curl -X POST localhost:8090/api/jobs/3/cancel      # queued → cancelled, running → SIGTERM (SIGKILL after 10 s)
+curl -X POST localhost:8090/api/jobs/3/kill        # running → SIGKILL now
+curl -X POST localhost:8090/api/jobs/remove-many -d '{"ids":[1,2],"delete_files":true}'   # delete finished jobs and their result files
+```
+| Endpoint | Description |
+|---|---|
+| `POST /api/jobs` | `type`: `cache` (`src`, `dst`, `size` 512, `caption`, `prefix`, `vae_backend`:"cpu") / `train` (`data`, `out`, `name`, `steps` 200, `lr`, `rank`, `alpha`, `conv_rank`, `conv_alpha`, `seed`, `save_every`, `ckpt` true, `native` "all", `resume`, `model`, `fp16` true, `loss_scale`, `t_min`, `t_max`) / `generate` (`prompt`, `negative`, `lora`, `lora_weight` 1, `width`/`height` 1024 (multiples of 64), `steps` 20, `cfg` 7, `seed` 42). Whether paths exist is checked **when the job starts**, so a job can use a cache or LoRA that an earlier queued job will create |
+| `GET /api/jobs`, `GET /api/jobs/<id>`, `GET /api/jobs/<id>/log` | list, details (last 60 log lines, result files), full log |
+| `POST /api/jobs/<id>/cancel`, `/kill`, `/move` (`{"dir":"up"/"down"/"top"}`), `/remove` (`{"delete_files":bool}`) | cancel, kill, reorder queued jobs, remove a finished job |
+| `POST /api/jobs/remove-many` | `{"ids":[…], "delete_files":bool}`. Queued and running jobs are skipped. File deletion only removes **files that job created** (the LoRA and its `_s<step>` checkpoints, generated image and log, the cache's `.npy`, `.check.png`, `cache.dgl`, `captions.txt`). Source photos are never deleted |
+| `POST /api/queue/cancel-all` (optionally `{"running":true,"force":true}`), `/pause`, `/resume` | cancel all queued jobs, pause/resume the queue |
+| `GET /api/config`, `GET /api/list` | server settings; LoRAs, caches and image folders to pick from in the forms |
+| `GET /files/<path>` | download a file inside `--root` |
+| v0.3 compatible: `POST /api/train`, `GET /api/status`, `POST /api/stop`, `GET /api/log` | `/api/train` now queues the job instead of refusing (409) |
 
 ### 4. Check the result (generate with sd.cpp)
 ```sh
@@ -270,14 +337,16 @@ To use it directly with sd-cli: `--lora-model-dir out -p "...<lora:dog:1>" --lor
 | `sdxl_lora --train <dir> --grad-check` | checks checkpointing gradients = full-graph gradients (compared at step 2) |
 | `sdxl_lora --mem-plan <latent side> [--ckpt] [--native all]` | computes training-graph memory without a GPU (64 = 512px, 128 = 1024px) |
 | `SDXL_NAN_DEBUG=1 sdxl_lora --train ... --steps N` | finds the first node that produces a non-finite value at step N (non-checkpointing mode). **v0.3**: also checks backward nodes |
+| `python3 tests/test_server.py build/sdxl_lora_server` | **v0.4** job-server tests, 56 checks with fake trainer and sd-cli (no GPU): ordering, reordering, cancel/kill including child processes, restart recovery, path restrictions, selective deletion that keeps source photos, tokens, UI off / custom frontend / CORS |
 | `tools/guard.sh <log> <cmd>` | memory guard for iGPUs: kills the command when GTT + system used exceeds `GUARD_LIMIT_MIB`. **v0.2**: inside an LXC container, "used" is read from cgroup `memory.stat` (anon+kernel+shmem) instead of `free -m` (unchanged when run directly on a host). In LXC (lxcfs), `free` jumped by several GiB while a model was being uploaded to the GPU and killed healthy jobs (`verification/v0.2/logs/stage4_sdcpp_memory_spike_investigation.txt`) |
 
-## Known limitations (v0.3)
+## Known limitations (v0.4)
 - Batch size 1, a single square resolution (no aspect-ratio buckets), UNet LoRA only (no text-encoder LoRA). The proj_in/out and ff Linear layers inside the transformers are not targeted (kohya's default includes them)
 - Only two groups of per-module rank/alpha (attention, 1x1 and Linear / 3x3 convolution). No per-block rank like kohya's `block_dims`
 - fp16 matmul training (v0.3) was verified with a 1024px attention LoRA for 200 steps and a 256px LoCon for 40 steps. Weights and activations are stored as before (f16 weights, f32 activations), so memory is the same as f32 training: it is faster, not smaller
 - Step time increases by about 15% in long 1024px runs (cause unknown)
-- stable-diffusion.cpp `sd-cli` is needed for the data cache and for checking results
+- stable-diffusion.cpp `sd-cli` is needed for the data cache and for checking results (the server's cache and generate jobs use it via `--sd-cli`)
+- The server runs one job at a time (GPU memory). Batches are several jobs (the web UI's image count adds one job per seed). No user accounts (a single token)
 - Only one GPU has been verified: Radeon 660M (RADV)
 
 ## Layout

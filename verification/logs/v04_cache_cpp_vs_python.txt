@@ -1,0 +1,29 @@
+# v0.4 캐시 만들기: tools/make_cache.py(파이썬) vs 서버 cache 작업(C++ 이식) — 2026-11-28
+# 같은 강아지 사진 5장, 512px, 캡션 'a photo of sks dog', sd-cli -t 10. 파이썬: cache/py_dog512, 서버: cache/srv_dog512
+## DGL 스크립트 (경로 표기·생성 주석 1줄 정규화 후)
+본문 동일 (55줄)
+## captions.txt (이름, 캡션)
+동일
+## 결과 파일
+비트 일치: alvan-nee-9M0tSjb-cpA-unsplash.crossattn.npy
+비트 일치: alvan-nee-9M0tSjb-cpA-unsplash.latent.npy
+비트 일치: alvan-nee-9M0tSjb-cpA-unsplash.vector.npy
+비트 일치: alvan-nee-bQaAJCbNq3g-unsplash.crossattn.npy
+비트 일치: alvan-nee-bQaAJCbNq3g-unsplash.latent.npy
+비트 일치: alvan-nee-bQaAJCbNq3g-unsplash.vector.npy
+비트 일치: alvan-nee-brFsZ7qszSY-unsplash.crossattn.npy
+비트 일치: alvan-nee-brFsZ7qszSY-unsplash.latent.npy
+비트 일치: alvan-nee-brFsZ7qszSY-unsplash.vector.npy
+비트 일치: alvan-nee-eoqnr8ikwFE-unsplash.crossattn.npy
+비트 일치: alvan-nee-eoqnr8ikwFE-unsplash.latent.npy
+비트 일치: alvan-nee-eoqnr8ikwFE-unsplash.vector.npy
+비트 일치: alvan-nee-Id1DBHv4fbg-unsplash.crossattn.npy
+비트 일치: alvan-nee-Id1DBHv4fbg-unsplash.latent.npy
+비트 일치: alvan-nee-Id1DBHv4fbg-unsplash.vector.npy
+['py_dog512', 'alvan-nee-9M0tSjb-cpA-unsplash.check.png'] vs ['srv_dog512', 'alvan-nee-9M0tSjb-cpA-unsplash.check.png'] 픽셀 완전 일치
+['py_dog512', 'alvan-nee-bQaAJCbNq3g-unsplash.check.png'] vs ['srv_dog512', 'alvan-nee-bQaAJCbNq3g-unsplash.check.png'] 픽셀 완전 일치
+['py_dog512', 'alvan-nee-brFsZ7qszSY-unsplash.check.png'] vs ['srv_dog512', 'alvan-nee-brFsZ7qszSY-unsplash.check.png'] 픽셀 완전 일치
+['py_dog512', 'alvan-nee-eoqnr8ikwFE-unsplash.check.png'] vs ['srv_dog512', 'alvan-nee-eoqnr8ikwFE-unsplash.check.png'] 픽셀 완전 일치
+['py_dog512', 'alvan-nee-Id1DBHv4fbg-unsplash.check.png'] vs ['srv_dog512', 'alvan-nee-Id1DBHv4fbg-unsplash.check.png'] 픽셀 완전 일치
+# .check.png 파일 자체가 다른 이유: sd.cpp가 PNG iTXt 'dgl'에 스크립트 전문을 넣는데 첫 주석 줄(생성 도구 이름)이 다름. 픽셀은 같음
+## 메모리: 파이썬 GUARD done rc=0 peak_sum=3871MiB / 서버 작업 GUARD done rc=0 peak_sum=3995MiB

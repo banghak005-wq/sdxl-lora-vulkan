@@ -1,0 +1,61 @@
+# v0.4 작업 큐 서버 동작 시험 (가짜 학습기·가짜 sd-cli, GPU 안 씀) — 2026-11-28
+# python3 tests/test_server.py build/sdxl_lora_server
+PASS config — {"cache": true, "guard": false, "guard_limit_mib": 11264, "model": "models/sd_xl_base_1.0.safetensors", "paused": false, "sd_cli": true, "token": false, "vae": "models/sdxl_vae.safetensors"}
+PASS 파이프라인 4개 모두 done — [(1, 'done', ''), (2, 'done', ''), (3, 'done', ''), (4, 'done', '')]
+PASS 차례 실행 (시작 순서 = 넣은 순서)
+PASS 겹침 없음 (앞 작업 끝난 뒤 다음 시작)
+PASS 캐시: 캡션 .txt 우선 + prefix — a	/tmp/sdxl_srvtest_u2rsgb15/root/dataset/dogs/a.jpg	p, a cute dog
+b	/tmp/sdxl_srvtest_u2rsgb15/root/dataset/dogs/b.png	p, sks dog
+PASS 캐시: DGL 스크립트 (make_cache.py와 같은 형식)
+PASS 캐시 결과 파일
+PASS 생성: LoRA 태그가 프롬프트에, 출력 그림 — [{'kind': 'image', 'path': 'jobs/3/image.png'}]
+PASS 생성 진행률 파싱 — {'sec_per_step': 0.2, 'step': 4, 'steps': 4}
+PASS 학습 진행률 파싱 + LoRA 결과
+PASS 결과 내려받기 (/files)
+PASS 일시정지 중 시작 안 함
+PASS 순서 바꾸기 (top, down) 반영
+PASS 대기 작업 취소
+PASS 실행 중 취소 (SIGTERM으로 바로 끝남) — 0.2s
+PASS SIGTERM 무시하는 작업 → 10초 뒤 자동 SIGKILL — 10.5s
+PASS 손자 프로세스까지 종료 (그룹 kill) — pid 937538
+PASS 즉시 강제 종료 (kill) — 0.2s, 손자 살아있음=False
+PASS 서버가 죽어도 작업 프로세스는 남아 있음 (재시작 시 정리 대상)
+PASS 재시작 후 돌던 작업 = interrupted — interrupted
+PASS 남은 작업 프로세스(손자 포함) 정리
+PASS 대기 작업은 재시작 후 이어서 실행
+PASS root 밖 경로 거부 (train data) — {'error': 'data: --root 안의 경로여야 함'}
+PASS root 밖 경로 거부 (lora 절대경로) — {'error': 'lora: --root 안의 경로여야 함'}
+PASS 프롬프트 안의 <lora:> 직접 지정 거부 — {'id': 14}
+PASS /files root 밖 거부 — 404
+PASS 잘못된 type 거부
+PASS 잘못된 크기 → 작업 실패 + 이유 기록 — width/height는 64의 배수
+PASS 선택 삭제 응답 — {'files_deleted': 33, 'removed': 5, 'skipped_active': []}
+PASS 원본 사진·캡션은 보존 (캐시 산출물만 삭제) — ['a.jpg', 'a.txt', 'b.png']
+PASS 캐시 폴더 삭제 (비었으므로)
+PASS 학습 LoRA 삭제
+PASS 생성 작업 폴더 삭제
+PASS 다른 작업 결과는 그대로
+PASS 파일 없이 목록에서만 삭제
+PASS 대기 중 작업은 삭제 안 함
+PASS 대기 전부 취소
+PASS 호환 /api/status (step, sec_per_step) — {"state": "running", "step": 4, "steps": 50}
+PASS 호환 /api/stop
+PASS 호환 /api/log
+PASS 토큰: 없으면 401
+PASS 토큰: 헤더 OK
+PASS 토큰: 쿠키 OK
+PASS 토큰: 틀리면 401
+PASS 토큰: /files도 보호
+PASS 토큰: 첫 화면(/)은 열림
+PASS --ui off: / 는 화면 대신 API 안내 JSON — {'api': ['GET /api/config', 'GET /api/jobs', 'POST /api/jobs', 'GET /api/jobs/<i
+PASS --ui off: API는 그대로
+PASS --ui <폴더>: / 에 직접 만든 index.html — <!doctype html><title>my frontend</title>
+PASS --ui <폴더>: 프론트 파일은 토큰 없이
+PASS --ui <폴더>: API는 여전히 토큰 필요 (폴더의 api/ 파일로 우회 불가)
+PASS --ui <폴더>: 토큰 주면 API 정상
+PASS --cors: 사전 요청(OPTIONS) 204 + 허용 헤더 — (204, 'http://localhost:5173', 'Authorization, Content-Type')
+PASS --cors: API 응답에 허용 헤더 — http://localhost:5173
+PASS --cors 잘못된 값 거부
+PASS --ui 없는 폴더 거부
+
+56/56 PASS

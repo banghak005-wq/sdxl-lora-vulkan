@@ -1,12 +1,14 @@
 > ⚠️ **이 문서는 AI(코딩 에이전트/LLM)가 읽고 이 저장소를 설명·수정하도록 쓴 것이다. 사람이 읽으라고 쓴 문서가 아니다.** 압축된 서술, 내부 용어, 파일·함수 이름 위주라 사람에게는 읽기 불편할 수 있다. 사람은 README.md(영어) / README.ko.md(한국어)를 볼 것.
 
-# for_ai.md — SDXL LoRA 학습 on Vulkan v0.3
+# for_ai.md — SDXL LoRA 학습 on Vulkan v0.4
 
+> v0.4 = v0.3 + **작업 큐 웹서버**(캐시·학습·생성을 한 큐로 차례 실행, 프로세스 그룹 단위 중지·강제 종료, 재시작에 남는 큐, `--token auto` 임시 토큰, 끝난 작업 선택 삭제, 캐시 DGL 작성을 C++로 옮겨 서버에 파이썬 불필요). 학습기·ggml은 v0.3과 같음. 바뀐 곳: 1.3, 1.15, 2.14
+>
 > v0.3 = v0.2 + **fp16 행렬곱 학습용 손실 스케일링**(`--loss-scale`, fp16이면 자동 dynamic) + `SDXL_NAN_DEBUG`가 역전파 노드까지 검사 + 서버 `loss_scale` 키. f32(`GGML_VK_DISABLE_F16=1`) 학습은 v0.2와 비트 단위로 같음. 바뀐 곳: 1.5, 1.7, 1.8, 1.9, 1.10, 1.13, 1.15, 1.18, 2.13
 >
 > v0.2 = v0.1 + **합성곱 LoRA(LoCon, `--conv-rank`)** + guard 측정 수정(cgroup 장부, 1.16/2.12). 옵션을 안 쓰면 v0.1과 비트 단위로 같은 학습. 바뀐 곳: 1.1, 1.4, 1.5, 1.8, 1.10, 1.13, 1.14, 1.15, 1.18, 1.19, 2.12
 
-> 경로 안내 (v0.3 폴더 기준): v0.1·v0.2 시절 항목이 가리키는 `verification/logs/stage*`, `verification/images/`, `verification/sdxl_ref*` 등은 `verification/v0.1/…`, `verification/v0.2/…`로 옮겨 두었다. 학습한 LoRA(`loras/*.safetensors`)는 배포하지 않는다.
+> 경로 안내 (v0.3 폴더 기준): v0.1·v0.2 시절 항목이 가리키는 `verification/logs/stage*`, `verification/images/`, `verification/sdxl_ref*` 등은 `verification/v0.1/…`, `verification/v0.2/…`로, v0.3 시절 `verification/logs/v03_*`는 `verification/v0.3/logs/`로 옮겨 두었다. 학습한 LoRA(`loras/*.safetensors`)는 배포하지 않는다.
 
 구성: **1부 최종 설계도**(현재 코드가 무엇을 어떻게 하는가, 1.11~1.20은 빌드·옵션·형식·API·문제 해결·확장까지 운영 레퍼런스) → **2부 시행착오**(그 설계에 이르기까지 겪은 문제와 판단 근거). 이 문서만으로 빌드·사용·검증·문제 해결·수정이 가능하도록 썼다.
 수치는 AMD Radeon 660M(RDNA2, 6 CU, UMA, 전용 1GiB + GTT 최대 11GiB), Mesa 25.0.7 RADV, Vulkan 1.4 기준.
@@ -39,7 +41,7 @@
 | `src/unet_ggml.h` | `UNetBuilder`: SDXL형 UNet을 ggml 그래프로. `UNetConfig::sdxl()`(320/[1,2,4]/res 2/depth [0,2,10]/head_dim 64/GN 32) 과 `::tiny()`(검증용) 공유. 블록 API `plan()/block(k,h,skip,emb,ctx)/time_emb(t,y)`, `unet()`도 블록 API로 구현 |
 | `src/sdxl_io.h` | safetensors 헤더 파싱(nlohmann/json), f16→f32 업로드, `.npy` 읽기/쓰기, SDXL 이산 스케줄(`DiscreteSchedule`: scaled_linear 1000스텝, k-diffusion `sigma_to_t`) |
 | `src/cli/sdxl_lora.cpp` | 학습기. 모드: `--train`(전체 그래프), `--train --ckpt`(체크포인팅), `--grad-check`, `--check-ref`, `--mem-plan`. `UNetWeights`, `LoraSet`(생성/kohya 로드·저장), `train()`, `train_ckpt()`, `mem_plan()`, `nan_debug()` |
-| `src/server/server.cpp` | cpp-httplib 서버. `/api/train`(fork+exec로 CLI 실행, 로그를 `<root>/logs/train-*.log`로), `/api/status`(로그의 `step` 줄을 정규식으로 파싱 → step/loss/ema/s/step/ETA), `/api/stop`(SIGTERM), `/api/log`, `/files/*`. 경로는 `--root` 안으로 제한(`weakly_canonical` + `lexically_relative`), 기본 127.0.0.1, 동시 1작업(409), 기본 `GGML_VK_DISABLE_F16=1` |
+| `src/server/server.cpp`, `src/server/page.h` | **v0.4** 작업 큐 웹서버 (캐시·학습·생성을 한 큐로 차례 실행, 프로세스 그룹 단위 중지/강제 종료, queue.json 영속, 임시 토큰, 결과 보관·선택 삭제). 캐시 DGL 스크립트를 서버가 직접 작성(파이썬 불필요). 상세 1.15 |
 | `tests/tinyunet.cpp` + `tests/ref_tiny_unet.py` | 축소판 UNet을 PyTorch(float64)와 비교. `--native`, `--backend`, `--compare`(연산별 Vulkan vs CPU 자체 오차, 매 노드 입력 동기화) |
 | `patches/ggml-backward-fixes.patch` | ggml(eeda9ec4, leejet/ggml sd.cpp 브랜치)에 대한 수정 (1.6절) |
 | `tools/` | `make_cache.py`, `eval_prompt.sh`, `gallery.py`, `guard.sh`(GTT+시스템 used 합 감시, v0.2부터 used는 cgroup 장부), `ref_unet.dgl`(sd.cpp 기준값), `st_header.py`, `npy_info.py`, `guard_runs.py` |
@@ -242,21 +244,23 @@ step    1  t=558  loss 0.03884  ema 0.03884  57.53s (fwd 15.73 bwd 41.73)  buf 2
 **`--check-ref <dir>` 입력** (`tools/ref_unet.dgl`을 `sd-cli -M dgl --script tools/ref_unet.dgl --tensor x x.npy --tensor d d.npy --tensor crossattn crossattn.npy --tensor vector vector.npy --tensor params params.npy`로 생성; DGL 안의 `model_path`, `width/height/latent`, `t`(0~1 정규화), `seed`, `backend` 수정 가능):
 `x.npy`(입력 잠재값), `d.npy`(sd.cpp의 D(x,σ); `--lora`면 `d_lora.npy`), `crossattn.npy`, `vector.npy`, `params.npy` = [σ, c_in, c_out, c_skip, t]. 비교: ε_ref = (D − c_skip·x)/c_out vs 학습기 ε(입력 x·c_in, timestep = sigma_to_t(σ)). 결과 `eps_ours.npy` 저장
 
-## 1.15 서버 API 레퍼런스 (`sdxl_lora_server`)
-실행: `sdxl_lora_server --root <작업 폴더> [--cli <sdxl_lora>] [--host 127.0.0.1] [--port 8090]`. `--cli` 기본은 서버 실행 파일과 같은 폴더의 `sdxl_lora`. 자식 프로세스는 `--root`를 현재 폴더로 실행되므로, 학습기의 상대 경로 기본값(`models/...`)도 root 기준.
-
-| 메서드/경로 | 요청 | 응답 |
-|---|---|---|
-| `GET /` | | 진행 상황 HTML (5초 새로고침) |
-| `GET /api/status` | | JSON: `state`(`idle`/`running`/`stopping`/`done`/`failed`/`stopped`), `args`(실행 명령), `steps`, `exit_code`, 그리고 로그에 step 줄이 있으면 `step`, `loss`(문자열, nan 가능), `ema`, `sec_per_step`, `eta_sec`, `log_tail`(마지막 20줄) |
-| `POST /api/train` | JSON (아래) | 200 + status / 400 `{"error"}` (경로, JSON) / 409 (실행 중) / 500 (fork 실패) |
-| `POST /api/stop` | | 200 `{"ok":true}` (SIGTERM, 상태 `stopping`→`stopped`) / 409 |
-| `GET /api/log` | | 현재(마지막) 작업 로그 전체 text |
-| `GET /files/<경로>` | | root 안 파일 (png/jpg/json/txt/log는 해당 MIME, 나머지 octet-stream) / 404 |
-
-`/api/train` JSON (괄호는 기본값): `data`(필수, root 안 폴더), `out`("out/lora.safetensors"), `steps`(200), `lr`(1e-4), `rank`(8), `alpha`(8), `conv_rank`(0, v0.2), `conv_alpha`(키가 있을 때만 전달, 없으면 학습기 기본 = conv_rank), `seed`(42), `save_every`(0), `t_min`(0), `t_max`(999), `ckpt`(true), `native`("all", 빈 문자열이면 옵션 생략), `resume`(root 안 존재 파일), `model`(root 안 존재 파일), `fp16`(**v0.3 기본 true** → 학습기가 자동으로 손실 스케일링 dynamic. false → 자식에 `GGML_VK_DISABLE_F16=1`, f32), `loss_scale`(**v0.3**, `"dynamic"` 또는 양수 → `--loss-scale`, 그 밖은 400. 없으면 학습기 자동). 진행 파싱 정규식은 `^step ...`이라 v0.3의 줄 끝 `S=`와 `overflow step` 줄의 영향 없음.
-- 로그: `<root>/logs/train-YYYYmmdd-HHMMSS.log`. 상태는 메모리에만 있어 서버 재시작 시 사라짐 (자식은 계속 돌 수 있음 → `ps`로 확인)
-- 보안: 인증 없음, 경로 검사는 `weakly_canonical` 후 root 기준 상대 경로가 `..`로 시작하면 거부. 외부 공개가 필요하면 리버스 프록시 + 인증을 앞에 둘 것
+## 1.15 서버 레퍼런스 (`sdxl_lora_server`, v0.4 작업 큐)
+사람용 사용법·API 표는 README "3. 작업 큐 웹서버". 여기는 구현 세부.
+- 파일: `src/server/server.cpp`(큐·실행·HTTP), `src/server/page.h`(웹 화면 HTML 한 장, 외부 라이브러리 없음, ko/en). 의존: cpp-httplib, nlohmann/json (third_party, 기존과 같음). ggml 의존 없음
+- 실행 옵션: `--root`(필수) `--cli`(기본 실행 파일 옆 sdxl_lora) `--sd-cli` `--tools`(guard.sh 위치. 기본은 실행 파일 옆 `tools/`(릴리스 묶음), `../tools`(저장소의 bin/·build/), `<root>/tools` 순) `--model`/`--vae`(기본 `models/…`, 상대면 root 기준) `--sd-args`(생성 공통 인자, 공백 분리) `--guard auto|on|off`(auto = guard.sh 있고 `/sys/class/drm/card0/device/mem_info_gtt_used` 읽힐 때) `--guard-limit-mib`(11264) `--threads`(캐시 sd-cli -t, 0=CPU 수) `--token <값>|auto` `--ui builtin|off|<폴더>` `--cors <origin>` `--host` `--port`. 환경변수 `SDXL_SERVER_TOKEN`
+- **작업 모델**: `Job{id,type,state,params,error,created,started,finished(초, 밀리초 정밀),exit_code,pid,stop_mode}`. `g_jobs` 벡터 순서 = 큐 순서. 상태: queued → running → done/failed/stopped, 또는 queued → cancelled, 재시작 시 running → interrupted. 저장: `<root>/jobs/queue.json`(임시 파일 + rename), 상태 바뀔 때마다
+- **실행**: worker 스레드 300ms 주기. 실행 중 없고 일시정지 아니면 첫 queued 시작. 인자는 **시작 직전에** `build_args`로 만든다(앞 작업이 만들 파일을 뒤 작업이 쓸 수 있게) → 인자 오류(경로 없음, 크기 64배수 아님 등)는 그 작업을 failed + error로. fork 후 자식: `setpgid(0,0)`(작업 = 프로세스 그룹), 로그 `jobs/<id>/log.txt`에 stdout/stderr, fd 3~1023 닫기(서버 소켓이 자식에 남아 재시작 시 포트를 쥐는 일 방지), `chdir(root)`, env(fp16:false → `GGML_VK_DISABLE_F16=1`, guard → `GUARD_LIMIT_MIB`), `execvp`. guard 켜짐이면 앞에 `bash tools/guard.sh jobs/<id>/mem.log`
+- **중지**: cancel = 그룹에 SIGTERM, 10초 지나도 안 끝나면 SIGKILL. kill = 그룹에 즉시 SIGKILL. 리더가 끝나면 그룹에 SIGKILL 한 번 더(남은 손자 정리). 실측(실제 학습, 660M): kill 후 0.5초 안에 그룹(guard bash, sdxl_lora, sleep) 전부 사라지고 GTT 4773 → 13 MiB. GPU에 이미 넘어간 작업이 있으면 몇 초 걸릴 수 있음(5.3초 관측)
+- **재시작**: queue.json의 running 작업 pid(=그룹)가 살아 있으면 SIGTERM → 최대 3초 → SIGKILL 후 interrupted. 이전 서버가 비정상 종료된 상태에서 남은 학습이 GPU를 쥔 채 새 작업이 시작되면 메모리가 넘치므로 필수
+- **작업 종류별 인자**: train = v0.3 `/api/train`과 같은 키 → `sdxl_lora --train …`(out 기본 `out/<name 또는 data 폴더 이름>.safetensors`, `--model`은 항상 명시). generate = `sd-cli -m <model> --vae <vae> -p <prompt + <lora:stem:w>> -W -H --steps --cfg-scale --seed -o jobs/<id>/image.png [-n] [--lora-model-dir <lora 폴더>] <sd-args>`. prompt 안의 `<lora:`는 거부(LoRA는 lora 항목으로만, root 밖 LoRA 로딩 방지). cache = **서버가 DGL 스크립트를 직접 씀**(`write_cache_script`, tools/make_cache.py를 C++로 옮긴 것) 후 `sd-cli -M dgl --script <dst>/cache.dgl -t N`. 파이썬 불필요
+  - 이식 일치 검증(2026-11-28, 강아지 5장 512px, -t 10): DGL 본문 동일(주석 1줄·경로 표기 제외), captions 동일, `.latent/.crossattn/.vector.npy` 15개 **비트 일치**, `.check.png` 픽셀 일치(파일 차이는 sd.cpp가 PNG iTXt에 넣는 스크립트 전문의 주석 1줄뿐). 캡션 JSON 문자열은 `dump(-1,' ',true)`(ensure_ascii, 파이썬 json.dumps와 같게). 비ASCII 파일 이름은 `_`로 바뀌므로 겹치면 `_2`… 붙임(파이썬판은 유니코드 isalnum이라 이름이 다를 수 있음)
+- **진행률**: 로그 끝 64KB를 \n·\r로 나눠 역순 탐색. train = `^step N t= loss ema S.SSs`, generate = `N/M - X.XXs/it`(sd-cli 진행 막대, `it/s`면 역수). eta = sec_per_step × 남은 스텝
+- **결과·삭제**: `outputs()` = train: out + `<stem>_s<숫자>.safetensors`, generate: `jobs/<id>/image.png`, cache: dst 폴더 + `*.check.png`. `delete_job_files()` = 같은 목록 + 캐시의 `.npy`/`cache.dgl`/`captions.txt`만 지우고 폴더는 비었을 때만 삭제, `jobs/<id>/` 통째. 캐시 dst를 원본 사진 폴더로 준 경우에도 사진·.txt는 남음(시험함)
+- **웹 화면 선택 (`--ui`)**: builtin = `/`에 page.h, off = `/`는 API 안내 JSON(화면 없음), <폴더> = httplib `set_mount_point("/", 폴더)`로 정적 서빙(`/` → index.html). httplib 처리 순서는 pre-routing → 정적 파일 → 핸들러라, 인증을 pre-routing에서 `/api`·`/files` 경로에만 걸면 프론트 파일은 공개, 프론트 폴더에 `api/…` 파일이 있어도 그 경로는 토큰 필요(시험함). `--cors`("*" 또는 http(s)://…): pre-routing에서 Allow-Origin/Headers(Authorization, Content-Type)/Methods 헤더, OPTIONS는 204로 바로 응답
+- **인증**: pre-routing 핸들러에서 `/api`, `/api/…`, `/files/…`만 검사 (v0.4 초판은 `/` 외 전부였음). 토큰 출처 3가지(Bearer 헤더, `sdxl_token` 쿠키, `?token=`), 같은 길이일 때 XOR 누적 비교. `--token auto` = `/dev/urandom` 20바이트 → 32자(헷갈리는 l,o,0,1 뺀 32진). 웹: 401이면 전체 화면 토큰 입력(`#gate`) → 쿠키 설정 후 새로고침, `?token=`은 쿠키로 옮기고 주소창에서 지움
+- **경로 제한**: `resolve_in_root` = weakly_canonical 후 root 기준 상대 경로가 `..`로 시작하면 거부(심볼릭 링크는 따라간 실제 위치 기준 → root 밖을 가리키는 링크 경로는 거부됨. 설정 경로 `--model`/`--vae`는 예외로 root 밖 가능)
+- v0.3 호환: `/api/train` = train 작업 추가(이제 409 없음), `/api/status` = 실행 중(없으면 마지막 시작) 작업을 옛 형식(state, step, steps, loss, ema, sec_per_step, eta_sec, log_tail 20줄, queued 수)으로, `/api/stop` = 실행 중 cancel, `/api/log`
+- 시험: `tests/test_server.py`(가짜 학습기·가짜 sd-cli로 56항목: 차례 실행, 순서, 일시정지, 취소/SIGTERM 무시→10초 SIGKILL/즉시 kill과 손자 정리, 재시작 복원과 잔여 프로세스 정리, 경로 거부, 선택 삭제와 원본 보존, 호환 API, 토큰, `--ui off`·`--ui <폴더>`·CORS·잘못된 옵션). GPU 불필요
 
 ## 1.16 도구 레퍼런스
 | 도구 | 사용 / 옵션 |
@@ -426,4 +430,13 @@ sd.cpp 내부(DGL/runner)에 학습을 넣는 대신 독립 학습기. 축소판
 - 검증 사다리: ① f32 모드 정확성(S가 2의 거듭제곱이면 결과가 비트 단위로 같아야 함 → 확인, v0.2 실행 파일과도 비트 일치) ② 256px 짧은 학습에서 fp16 S=1 / dynamic / f32 3자 비교 ③ v0.2 실패 실험(1024px 200스텝)을 같은 조건으로 재현해 가중치·이미지 비교
 - 관찰: 이 데이터에선 시작 S=32768에서 넘침이 한 번도 없었음 (200스텝 뒤 65536). 1024px는 손실 기울기 시작값이 원소당 1e-5 규모라 S≈3e4를 곱해도 fp16 최대값(65504)에 한참 못 미침. 넘침→감소 경로는 `--loss-scale-init 2^28 --loss-scale-window 10`(256px)으로 별도 확인: 1~4스텝 넘침마다 S/2, 2^24에서 한 번 더 넘쳐 2^23, 10스텝 정상 후 2^24로 복귀, 건너뜀 5·갱신 25 (`verification/logs/v03_overflow_backoff.txt`). 256px에선 2^24 근처가 넘침 경계 → 시작값 2^15는 넉넉히 안전
 - 속도: 1024px 평균 50.7s (v0.2 fp16 S=1 48.1s와 비슷, 검사·mul 비용 작음). 40스텝 무렵부터 스텝 시간이 39.6 → 51s로 느는 v0.2의 미해결 현상이 그대로 나타남
+
+## 2.14 v0.4: 작업 큐 웹서버
+- 추가 요청 (사용자, 2026-11-28): "프론트를 직접 만들 사람도 있을 텐데 기본 API 백엔드만 여는 옵션" → `--ui off|<폴더>`, `--cors`, 토큰은 /api·/files에만
+- 범위 결정 (사용자, 2026-11-28): "작업 큐잉하고 딴짓하러 가게". 접속은 로컬 기본 + 외부 노출 방법(퀵 터널·Tailscale·포트포워딩)은 문서로 안내하고 사용자가 고르게. 진행 중 요청 추가: 대기 취소와 **실행 중 프로세스 강제 종료**, 끝난 결과를 보관해 웹에서 내려받기, 끝난 작업 골라 삭제, 실행 옵션으로 고르는 **임시 토큰 + 첫 화면 잠금**, 그리고 "웹서버를 파이썬으로 하지 말고 극단적으로 가볍게" → 서버는 원래 C++였고 파이썬은 캐시 작업의 make_cache.py 호출뿐이었으므로 그 부분을 C++로 옮김(Go/Rust 불필요, 실행 파일 0.9MB)
+- 설계 선택: (1) 작업 = fork+exec된 자식 프로세스 + 자기 프로세스 그룹. 이유: 학습기·sd-cli가 끝나야 GPU 메모리가 확실히 반환되고, guard → 학습기, sd-cli 같은 다단 프로세스를 그룹째 죽여야 "부모만 죽고 GPU 쥔 자식이 남는" 사고가 없음. (2) 인자는 큐에 넣을 때가 아니라 **시작할 때** 만든다 → "캐시 → 학습 → 생성"을 한 번에 넣을 수 있음(뒤 작업의 입력 파일이 아직 없음). 넣을 때는 형식(경로가 root 안인지)만 검사. (3) 자식에서 fd 3 이상을 모두 닫음 → 서버가 죽어도 남은 학습 프로세스가 리스닝 소켓을 쥐지 않아 재시작 가능. (4) 재시작 시 남은 작업 그룹을 정리 → 이전 학습이 GPU를 쥔 채 새 작업이 시작되면 11GiB 예산을 넘음
+- 시험 순서: 가짜 학습기·가짜 sd-cli(bash)로 46항목(`tests/test_server.py`, 이후 `--ui`·`--cors` 추가로 56항목) → 실제 GPU로 캐시 이식 일치 → 실제 학습 강제 종료와 GTT 반환 → 실제 큐 전체
+- 밟은 것: (1) 순서 시험 실패 = 시각을 초 단위로 저장해 0.3초 작업 3개의 시작 순서를 못 가림 → 밀리초. (2) 재시작 시험 "서버가 안 뜸" = SIGTERM을 무시하는 잔여 프로세스를 10초 기다리느라 listen이 늦음 → 3초 후 SIGKILL. (3) 시험 정리에 `pgrep -x sdxl_lora_server`를 썼는데 프로세스 이름 15자 제한(16자)이라 아무것도 못 찾음 → `pgrep -f` 전체 경로. (4) 진행 확인에 `ps -g`를 썼다가 그룹이 아니라 세션 기준이라 빈칸 → `pgrep -g`
+- 캐시 이식 검증: 파이썬판과 서버판을 같은 사진·같은 -t로 → `.npy` 15개 비트 일치, `.check.png` 픽셀 일치(파일 차이는 sd.cpp가 PNG iTXt에 넣는 DGL 스크립트 전문의 주석 1줄). 즉 sd.cpp는 생성 PNG에 스크립트·경로를 메타데이터로 남김 → 공개할 그림이면 경로 노출 주의
+- 생성 경로 검증: 서버 생성(LoRA 없음, 768px seed 42)이 예전 sd-cli 직접 실행 그림과 **픽셀 완전 일치**. LoRA(at_runtime) 그림은 거의 같지만 바이트 일치 14% → 2.14 아래 결과 참고
 

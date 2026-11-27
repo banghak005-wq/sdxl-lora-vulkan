@@ -1,0 +1,64 @@
+# v0.4 실제 GPU 작업 큐 (Radeon 660M, 서버를 통해서만 실행) — 2026-11-28
+# 서버: sdxl_lora_server --root <work> --sd-cli <sd-cli> --threads 10 --token auto (guard 자동 켜짐, 한도 11264 MiB)
+
+## 작업 목록 (queue.json)
+# 1 cache    done        16s {"dst": "cache/srv_dog512", "size": 512, "src": "dataset/dog"}
+# 2 train    stopped     29s {"data": "cache/srv_dog512", "out": "out/killtest.safetensors", "steps": 200}
+# 3 train    stopped     30s {"data": "cache/srv_dog512", "out": "out/killtest.safetensors", "steps": 200}
+# 4 train    stopped     29s {"data": "cache/srv_dog512", "out": "out/killtest.safetensors", "steps": 200}
+# 5 train    done       161s {"data": "cache/srv_dog512", "out": "out/eq_srv.safetensors", "steps": 20}
+# 6 generate done       305s {"prompt": "a photo of sks dog on a sunny beach", "width": 768}
+# 7 generate done       323s {"lora": "out/ref/dog_locon.safetensors", "prompt": "a photo of sks dog on a sunny beach", "width": 768}
+# 8 train    done      3773s {"data": "cache/srv_dog512", "out": "out/dog512_srv.safetensors", "save_every": 250, "steps": 500}
+# 9 generate done       320s {"lora": "out/dog512_srv.safetensors", "prompt": "a photo of sks dog in a bucket", "width": 768}
+#10 generate done       318s {"lora": "out/dog512_srv.safetensors", "prompt": "a photo of sks dog on a sunny beach", "width": 768}
+#11 generate done       317s {"lora": "out/dog512_srv.safetensors", "prompt": "a photo of sks dog in a snowy forest", "width": 768}
+#12 generate done       332s {"lora": "out/ref/dog_locon.safetensors", "prompt": "a photo of sks dog on a sunny beach", "width": 768}
+#  1 = 캐시 이식 비교용, 2~4 = 실제 학습 강제 종료 시험(kill/cancel/kill), 5 = 명령줄 비교용 20스텝, 6·7 = 명령줄 그림 재현, 8 = 본 학습, 9~11 = 학습한 LoRA로 생성, 12 = 7과 같은 요청 반복
+
+## 실제 학습 강제 종료 (GTT 반환)
+기준 GTT 13 MiB. #2 kill: 실행 중 GTT 4773 → stopped 후 13 MiB (stopped까지 5.3초). #3 cancel(SIGTERM): 4773 → 13 MiB (5.7초)
+#4 kill 추적: 그룹 = bash(guard) + sdxl_lora + sleep. kill 후 +510ms에 그룹 프로세스 없음, GTT 13 MiB, 상태 stopped
+
+## 본 학습 #8 (512px, 500스텝, fp16 + 손실 스케일링, 서버 기본값)
+[ckpt] 블록 20개, 블록 출력+기울기 저장 126.2 MiB, 영구 버퍼 171.3 MiB
+손실 스케일링: dynamic, S=32768 (fp16 행렬곱 켜짐)
+step    1  t=929  loss 0.00556  ema 0.00556  7.58s (fwd 1.91 bwd 5.58)  buf 502 MiB  GTT 4773 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+step  100  t=467  loss 0.07359  ema 0.10292  7.52s (fwd 1.87 bwd 5.57)  buf 502 MiB  GTT 4774 MiB  [alvan-nee-9M0tSjb-cpA-unsplash]  S=32768
+step  250  t=640  loss 0.02443  ema 0.07085  7.52s (fwd 1.87 bwd 5.57)  buf 502 MiB  GTT 4774 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=65536
+저장: <work>/out/dog512_srv_s250.safetensors (1680 텐서, step 250)
+step  400  t=900  loss 0.00355  ema 0.10686  7.52s (fwd 1.87 bwd 5.56)  buf 502 MiB  GTT 4774 MiB  [alvan-nee-Id1DBHv4fbg-unsplash]  S=65536
+step  500  t=362  loss 0.10128  ema 0.10574  7.52s (fwd 1.87 bwd 5.57)  buf 502 MiB  GTT 4774 MiB  [alvan-nee-eoqnr8ikwFE-unsplash]  S=131072
+평균 스텝 시간 (첫 스텝 제외): 7.53s
+평균 손실: 0.10473
+손실 스케일: 마지막 S=131072, 건너뛴 스텝 0 (AdamW 갱신 500번)
+저장: <work>/out/dog512_srv.safetensors (1680 텐서, step 500)
+메모리 GUARD done rc=0 peak_sum=6040MiB
+dog512_srv_s250.safetensors: up |w| 평균 2.053e-03, 최대 1.702e-02, up이 전부 0인 모듈 0/560, down |w| 평균 1.394e-02
+dog512_srv.safetensors: up |w| 평균 2.949e-03, 최대 2.979e-02, up이 전부 0인 모듈 0/560, down |w| 평균 1.450e-02
+    첫 파일과 공통 모듈 560개의 up 방향 유사도(cos) 0.834, 크기 비 1.441
+
+## 서버 경로 = 명령줄 경로 (학습)
+#5: 서버 캐시 + 서버 학습 20스텝 / 비교: 파이썬 캐시 + sdxl_lora 직접 실행 20스텝, 같은 인자
+  명령줄 step    1  t=929  loss 0.00556  ema 0.00556  7.56s (fwd 1.91 bwd 5.56)  buf 502 MiB  GTT 4773 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+  명령줄 step   20  t=510  loss 0.05967  ema 0.07877  7.51s (fwd 1.87 bwd 5.55)  buf 502 MiB  GTT 4774 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+  명령줄 평균 손실: 0.11176
+  서버   step    1  t=929  loss 0.00556  ema 0.00556  7.57s (fwd 1.90 bwd 5.58)  buf 502 MiB  GTT 4773 MiB  [alvan-nee-brFsZ7qszSY-unsplash]  S=32768
+  서버   step   20  t=510  loss 0.05967  ema 0.07877  10.31s (fwd 2.75 bwd 7.47)  buf 502 MiB  GTT 4774 MiB  [alvan-nee-bQaAJCbNq3g-unsplash]  S=32768
+  서버   평균 손실: 0.11176
+명령줄 LoRA vs 서버 LoRA: 비트 일치 텐서 1680/1680, rel_l2 0.000e+00
+
+## 서버 경로 = 명령줄 경로 (생성, 768px seed 42 20스텝 cfg 7, 같은 sd-cli 인자)
+LoRA 없음: ['6', 'image.png'] vs ['eval', 'beach_base_768_s42.png'] 픽셀 완전 일치
+LoCon LoRA: ['eval', 'beachv04_dog_locon_w1_768_s42.png'] vs ['12', 'image.png'] 픽셀 완전 일치
+LoCon LoRA: ['eval', 'beachv04_dog_locon_w1_768_s42.png'] vs ['7', 'image.png'] 다름 (바이트 일치 14.3%)
+LoCon LoRA: ['eval', 'beachv04_dog_locon_w1_768_s42.png'] vs ['eval', 'beach_dog_locon_w1_768_s42.png'] 픽셀 완전 일치
+→ 명령줄 재실행(beachv04) = 서버 #12 = 예전 명령줄(v0.2) 픽셀 일치. 서버 #7만 미세하게 다름(같은 요청인 #12는 일치) = sd-cli 자체의 가끔 있는 실행 간 차이(LoRA at_runtime), 서버와 무관. 눈으로는 같은 그림(같은 개체·구도, 목줄·눈 주변만 다름)
+
+## 생성 메모리
+#6 GUARD done rc=0 peak_sum=7865MiB
+#7 GUARD done rc=0 peak_sum=8146MiB
+#9 GUARD done rc=0 peak_sum=7819MiB
+#10 GUARD done rc=0 peak_sum=7911MiB
+#11 GUARD done rc=0 peak_sum=7860MiB
+#12 GUARD done rc=0 peak_sum=8107MiB

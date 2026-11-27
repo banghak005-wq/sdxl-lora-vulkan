@@ -1,6 +1,6 @@
 [English](README.md) | **한국어**
 
-# SDXL LoRA 학습 on Vulkan (ROCm/CUDA 없이) — v0.3
+# SDXL LoRA 학습 on Vulkan (ROCm/CUDA 없이) — v0.4
 
 **SDXL LoRA training with plain Vulkan (no ROCm, no CUDA), tested on an AMD Radeon 660M iGPU (6 CU, shared memory).**
 
@@ -9,13 +9,29 @@ SDXL LoRA를 학습한다. 결과 LoRA는 kohya 형식 safetensors라 stable-dif
 
 > 이 저장소의 코드와 문서는 Claude 에이전트(Anthropic)가 작성했고, 사람은 목표 설정·방향 결정·결과 판단을 맡았다. 설계 과정과 시행착오는 [for_ai.md](for_ai.md)에 그대로 남아 있다.
 
-**v0.3 새 기능: fp16 행렬곱 학습 (손실 스케일링)** — v0.2까지는 fp16 행렬곱으로 학습하면 기울기 언더플로로 LoRA가 학습되지 않아 f32 전용이었다.
+**v0.4 새 기능: 작업 큐 웹서버** — 캐시 만들기·학습·이미지 생성을 큐에 여러 개 넣어 두면 하나씩 차례로 실행한다. 넣어 두고 다른 일을 하다 돌아와 웹에서 결과를 보고 내려받으면 된다. 실행 중 작업 즉시 강제 종료, 재시작에도 남는 큐, 임시 접속 토큰(`--token auto`), 끝난 작업 골라 삭제. 서버는 C++ 실행 파일 하나라 파이썬이 필요 없다 (아래 "3. 작업 큐 웹서버").
+
+v0.3 기능: **fp16 행렬곱 학습 (손실 스케일링)** — v0.2까지는 fp16 행렬곱으로 학습하면 기울기 언더플로로 LoRA가 학습되지 않아 f32 전용이었다.
 v0.3은 손실 스케일링(dynamic)을 넣어 **fp16 행렬곱으로도 f32와 사실상 같은 LoRA**를 **1.33배 빠르게** 학습한다 (1024px 200스텝: LoRA 방향 유사도 0.999, 생성 이미지 거의 같음, 아래 "v0.3 결과").
 `GGML_VK_DISABLE_F16=1` 없이 실행하면 자동으로 켜진다. f32 학습(`GGML_VK_DISABLE_F16=1`)은 v0.2와 비트 단위로 같은 결과.
 
 v0.2 기능: **합성곱 LoRA (LoCon)** — `--conv-rank N`으로 ResBlock·다운/업샘플 합성곱에도 LoRA를 건다 (kohya `conv_dim`과 같은 규칙·같은 파일 형식).
 옵션을 안 주면 v0.1과 똑같이 동작한다 (같은 seed에서 학습 손실이 비트 단위로 같음을 확인).
 그 밖의 변경: `tools/guard.sh`(메모리 감시)가 LXC 안에서 멀쩡한 작업을 종료시키던 측정 오류 수정 (아래 5절).
+
+## v0.4 결과: 작업 큐 서버로 처음부터 끝까지
+강아지 사진 5장으로 **캐시 만들기 → 학습(512px, 500스텝) → 생성 3장**을 서버 큐에 한꺼번에 넣고 손대지 않았다. 전부 이 서버를 통해서만 실행했다.
+
+| 프롬프트 | LoRA 없음 | 서버로 학습한 LoRA (512px 500스텝, fp16) |
+|---|---|---|
+| `a photo of sks dog in a bucket` | ![](docs/images/bucket768_base.png) | ![](docs/images/bucket_v04_server_lora512.png) |
+| `a photo of sks dog on a sunny beach` | ![](docs/images/beach_base.png) | ![](docs/images/beach_v04_server_lora512.png) |
+| `a photo of sks dog in a snowy forest` | ![](docs/images/snow_base.png) | ![](docs/images/snow_v04_server_lora512.png) |
+
+- 학습 63분(스텝당 7.5초, 넘침 0), 768px 생성 장당 약 5분, 메모리 합계 최대 8.0GiB. 학습한 코기(큰 귀, 얼굴 흰 줄)가 나오고 장면 지시도 따른다. 양동이 그림의 주황 배경은 학습 사진 배경을 따라간 것 (사진 5장·저해상도 학습의 한계, v0.1의 384px 학습과 같은 현상)
+- **서버로 해도 결과가 같은지**: 서버 학습 LoRA = 명령줄 학습 LoRA **비트 일치**, 서버 생성 그림 = sd-cli 직접 실행 그림 **픽셀 일치**, 서버가 직접 만드는 캐시 = 기존 파이썬 스크립트 캐시 **비트 일치**
+- **강제 종료**: 실제 학습 중 kill → 0.5초 안에 프로세스 그룹 전체 종료, GPU 메모리(GTT) 4.7GiB → 0 반환
+- 서버 동작 시험 56항목 통과 (가짜 학습기로, GPU 없이 누구나 돌려 볼 수 있음). 상세: [`verification/`](verification/README.md)
 
 ## v0.3 결과: fp16 행렬곱 학습 (손실 스케일링)
 v0.2에서 실패했던 실험(강아지 5장, 1024px, 200스텝, seed 1, rank 8)을 **같은 조건**으로 v0.3에서 다시 했다. 생성은 sd.cpp 1024px, seed 42.
@@ -30,7 +46,7 @@ v0.2에서 실패했던 실험(강아지 5장, 1024px, 200스텝, seed 1, rank 8
 - LoRA 가중치: v0.3 fp16은 f32와 up 방향 유사도 **0.999**, 크기 비 0.999, 0인 모듈 0/560 (v0.2 fp16: 유사도 0.000, 0인 모듈 486/560)
 - 평균 손실 0.10518 (f32 0.1051), NaN·넘침 0번, 스텝당 50.7초 (f32 약 67.7초 → **1.33배 빠름**), 메모리는 f32와 같음 (합계 최대 9.2GiB)
 - f32 학습은 v0.2와 비트 단위로 같은 결과 (손실 스케일을 켜도 2의 거듭제곱이라 f32에선 결과가 안 바뀜)
-- 상세: `verification/logs/v03_*.txt`, `for_ai.md` 1.5·1.8·2.13
+- 상세: `verification/v0.3/logs/v03_*.txt`, `for_ai.md` 1.5·1.8·2.13
 
 ## v0.2 결과: 어텐션 LoRA vs LoCon (같은 데이터·같은 seed·같은 학습 순서)
 강아지 5장, rank 8, lr 1e-4. LoCon은 `--conv-rank 8 --conv-alpha 8`만 추가 (초기화·t·노이즈 순서가 어텐션 쪽과 똑같이 맞춰져 있어 차이는 합성곱 LoRA뿐).
@@ -133,7 +149,7 @@ v0.2까지는 fp16 행렬곱(`GGML_VK_DISABLE_F16` 없이)으로 학습하면 Na
 
 1024px 실제 학습에서는 20~40스텝쯤부터 스텝 시간이 약 15% 늘어 유지됐다 (384px 1시간 학습에선 없었음, 발열·클럭은 정상, 원인 미확정).
 
-검증 결과물(로그, 생성 이미지 전체, 기준 데이터)은 [`verification/`](verification/README.md) (v0.1·v0.2 것은 `verification/v0.1/`, `verification/v0.2/`). 학습한 LoRA 파일은 배포하지 않는다.
+검증 결과물(로그, 생성 이미지 전체, 기준 데이터)은 [`verification/`](verification/README.md) (이전 판 것은 `verification/v0.1/`, `verification/v0.2/`, `verification/v0.3/`). 학습한 LoRA 파일은 배포하지 않는다.
 
 ## 요구 사항
 - Linux, Vulkan 1.3 GPU 드라이버 (AMD RADV에서 검증). GPU가 쓸 수 있는 메모리 약 9GiB 이상 (iGPU면 GTT 크기 확인)
@@ -148,7 +164,7 @@ patches/get_ggml.sh ggml                 # ggml(eeda9ec4) 받기 + 이 프로젝
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_DIR=ggml
 cmake --build build -j4                  # build/sdxl_lora, build/sdxl_lora_server, build/tinyunet
 ```
-빌드된 x86-64 Linux 실행 파일(`sdxl_lora`, `sdxl_lora_server`)은 [Releases](../../releases)에 있다 (ggml 정적 링크, glibc 2.41에서 빌드). 받은 파일은 `bin/`에 두면 아래 예시 경로와 맞는다. 실행에 필요한 시스템 라이브러리: `libvulkan1`, `libgomp1`, `libstdc++6` + GPU의 Vulkan 드라이버. glibc가 더 오래된 배포판이면 소스에서 빌드.
+빌드된 x86-64 Linux 실행 파일(`sdxl_lora`, `sdxl_lora_server`)은 [Releases](../../releases)에 있다 (ggml 정적 링크, glibc 2.41에서 빌드). 받은 파일은 `bin/`에 두면 아래 예시 경로와 맞는다. v0.4 묶음에는 서버가 쓰는 메모리 감시 스크립트 `tools/guard.sh`도 들어 있다 (실행 파일 옆 `tools/`를 자동으로 찾음). 실행에 필요한 시스템 라이브러리: `libvulkan1`, `libgomp1`, `libstdc++6` + GPU의 Vulkan 드라이버. glibc가 더 오래된 배포판이면 소스에서 빌드.
 빌드 의존(Debian/Ubuntu): `build-essential cmake git glslc libvulkan-dev spirv-headers`. 빌드·사용·문제 해결의 상세는 [for_ai.md](for_ai.md) 1.11~1.20.
 
 ## Docker로 실행 (v0.3)
@@ -180,6 +196,7 @@ docker run --rm $GPU $VOL -w /work sdxl-vulkan-env \
 ```
 - `$WORK/models/sd_xl_base_1.0.safetensors`가 있어야 한다 (학습기의 기본 모델 경로가 작업 폴더 기준). 서버는 학습기를 `--root`(= `/work`) 안에서 실행한다
 - 학습 데이터 캐시(아래 사용법 1절)는 stable-diffusion.cpp의 `sd-cli`가 필요해서 이 환경엔 없다 → 호스트에서 만들어 `$WORK/cache/`에 두기
+- **v0.4 서버의 캐시·생성 작업**은 sd-cli가 필요하다: 호스트의 sd-cli를 같이 마운트하고 알려 준다 (예: `-v /path/to/sd-cli:/opt/sd-cli:ro` + 서버 인자 `--sd-cli /opt/sd-cli`). 없으면 학습 작업만 된다. 외부에 열 거면 서버 인자에 `--token auto`
 - `-p 127.0.0.1:8090:8090`: 서버는 인증이 없으므로 호스트 자신에게만 연다. 컨테이너 안의 `--host 0.0.0.0`은 Docker 포트 연결용
 - `HOME=/work`: Mesa가 GPU 셰이더 컴파일 결과를 `$WORK/.cache/`에 저장 → 다음 실행부터 첫 스텝이 빠름
 - `render` 그룹이 없는 배포판이면 `--group-add`에 `/dev/dri/renderD128`의 그룹 번호를 쓴다 (`ls -ln /dev/dri`로 확인)
@@ -240,17 +257,66 @@ GGML_VK_DISABLE_F16=1 build/sdxl_lora --train cache/dog1024 --ckpt --native all 
   - LoCon 모듈: `lora_unet_input_blocks_1_0_in_layers_2.lora_down.weight` `[rank, in, 3, 3]`, `.lora_up.weight` `[out, rank, 1, 1]`, 메타데이터 `ss_network_args = {"conv_dim", "conv_alpha"}`. stable-diffusion.cpp가 1878/1878 텐서 인식 (검증)
   - `--resume`은 파일과 `--rank/--alpha/--conv-rank/--conv-alpha`가 같아야 함
 
-### 3. 학습 (서버)
-CLI를 자식 프로세스로 돌리는 HTTP 작업 관리자. 한 번에 작업 하나, 학습이 끝나면 프로세스가 끝나 GPU 메모리가 반환된다.
+### 3. 작업 큐 웹서버 (v0.4)
+캐시 만들기, 학습, 이미지 생성을 **큐에 여러 개 넣어 두면 한 번에 하나씩 차례로** 실행하는 웹서버. 넣어 두고 다른 일을 하다가 돌아와서 결과를 보면 된다.
+- **C++ 실행 파일 하나** (`sdxl_lora_server`, 약 0.9MB). 파이썬 등 다른 런타임 없이 돈다. 필요한 것: `sdxl_lora`(학습), stable-diffusion.cpp의 `sd-cli`(캐시·생성)
+- GPU 메모리 때문에 동시 실행은 하지 않는다. 작업마다 별도 프로세스라 끝나거나 멈추면 GPU 메모리가 바로 반환된다
+- 큐는 `<root>/jobs/queue.json`에 저장 → 서버를 다시 켜도 대기 작업이 남고 이어서 실행된다 (돌던 작업은 "interrupted"로 표시, 남은 프로세스는 정리)
+- 웹 화면: 작업 추가(캐시 / 학습 / 생성 / **한 번에**: 사진 폴더 → 캐시 → 학습 → 미리보기 생성), 큐와 진행률·남은 시간, 로그, 끝난 작업 보관함(LoRA·그림·로그 내려받기, 골라서 삭제), 생성 그림 갤러리, 한국어/English
+- **멈추기**: 대기 작업 취소, 실행 중 작업 중지(SIGTERM → 10초 안에 안 끝나면 SIGKILL), **즉시 강제 종료**(SIGKILL), 대기 전부 취소, 큐 일시정지. 작업의 자식 프로세스(메모리 감시, sd-cli 등)까지 프로세스 그룹째 종료한다
+- AMD GPU면 작업마다 메모리 감시(`tools/guard.sh`)를 자동으로 붙인다 (`--guard auto|on|off`, 한도 `--guard-limit-mib`)
+
 ```sh
-build/sdxl_lora_server --root /path/to/workdir --port 8090     # 같은 폴더의 sdxl_lora를 씀 (--cli로 지정 가능)
-curl -X POST localhost:8090/api/train -d '{"data":"cache/dog1024","out":"out/dog.safetensors","steps":200,"save_every":100}'
-curl localhost:8090/api/status       # step, loss, ema, sec_per_step, eta_sec, log_tail
-curl -X POST localhost:8090/api/stop
-curl -O localhost:8090/files/out/dog.safetensors
+build/sdxl_lora_server --root /path/to/work --sd-cli /path/to/sd-cli --token auto
+#   접속 토큰 (이번 실행에만 유효): 9ryjewpxe64h6nbe7xapg8ftfxc24c8i
+#   바로 열기: http://127.0.0.1:8090/?token=9ryjewpxe64h6nbe7xapg8ftfxc24c8i
 ```
-브라우저로 `http://localhost:8090/`에 진행 상황 페이지. 요청의 경로는 `--root` 안으로 제한된다. **인증이 없으므로 기본값(127.0.0.1)으로만 열 것.**
-`/api/train` JSON 키: `data out steps lr rank alpha conv_rank(v0.2, 기본 0) conv_alpha(v0.2, 기본 conv_rank) seed save_every ckpt(기본 true) native(기본 "all") resume model fp16(**v0.3 기본 true**: fp16 행렬곱 + 손실 스케일링 자동, 1.33배 빠름. false면 f32 = v0.2와 같은 결과) loss_scale(v0.3, "dynamic" 또는 양수, 없으면 학습기 자동) t_min t_max`
+- 작업 폴더(`--root`) 안에 `models/sd_xl_base_1.0.safetensors`, `models/sdxl_vae.safetensors`(다른 곳이면 `--model`, `--vae`), 학습 사진 폴더를 둔다. 요청의 경로는 모두 `--root` 안으로 제한된다
+- 학습기는 같은 폴더의 `sdxl_lora`를 쓴다 (`--cli`로 지정 가능). `--sd-cli`가 없으면 학습 작업만 가능
+- 생성 공통 인자는 `--sd-args` (기본 `--vae-tiling --flash-attn auto,vae=off --lora-apply-mode at_runtime`: RADV에서 VAE flash attention 셰이더가 깨지는 문제 회피 + LoRA 메모리 절약). 캐시 작업의 CPU 스레드는 `--threads`
+
+**웹 화면 바꾸기 / 끄기** (프론트를 직접 만들 때)
+| 옵션 | 동작 |
+|---|---|
+| `--ui builtin` (기본) | 내장 웹 화면 |
+| `--ui off` | 화면 없이 **API만**. `/`는 API 안내 JSON |
+| `--ui <폴더>` | 그 폴더의 정적 파일(`index.html`, js, css …)을 `/`에 서빙. 직접 만든 프론트를 서버 하나로 같이 띄울 때 |
+| `--cors <origin>` | 프론트를 다른 주소에서 띄우고 이 API를 부를 때 허용할 출처 (예: `--cors http://localhost:5173`, 또는 `"*"`) |
+
+- 토큰은 `/api/…`와 `/files/…`에만 걸린다. 프론트 파일은 토큰 없이 열리고, 프론트는 API를 부를 때 `Authorization: Bearer <토큰>` 헤더(또는 `sdxl_token` 쿠키)를 보내면 된다
+- 내장 화면(`src/server/page.h`, HTML 한 장)이 API를 쓰는 예제이기도 하다
+
+**접속과 보안**: 서버는 기본으로 **이 기계 안(127.0.0.1)에서만** 열린다. 밖(폰, 다른 PC)에서 보려면 아래 중 하나를 직접 고른다.
+| 방법 | 예 | 비고 |
+|---|---|---|
+| Cloudflare 퀵 터널 | `cloudflared tunnel --url http://127.0.0.1:8090` → 출력되는 `https://….trycloudflare.com` | 계정 불필요. **주소를 아는 누구나 접속 가능 → 반드시 `--token`** |
+| Tailscale | 같은 tailnet 기기에서 `http://<이 기계의 tailscale 이름>:8090` (서버는 `--host 0.0.0.0` 또는 tailscale IP로) | tailnet 밖에는 안 보임. 그래도 `--token` 권장 |
+| 공유기 포트포워딩 | 공유기에서 외부 포트 → 이 기계 8090 (서버는 `--host 0.0.0.0`) | 인터넷 전체에 노출 → **`--token` 필수**, 가능하면 HTTPS 리버스 프록시 앞에 |
+
+- `--token auto`: 켤 때마다 새 임시 토큰(32글자)을 만들어 콘솔에 출력. 웹 첫 화면에서 토큰을 넣어야 들어갈 수 있고, 토큰 없이 `/api`·`/files`에 오면 401. `?token=…`으로 들어오면 바로 통과(주소창에서는 지움)
+- `--token <직접 정한 값>` 또는 환경변수 `SDXL_SERVER_TOKEN`(명령줄 기록에 안 남김). API에서는 `Authorization: Bearer <토큰>` 헤더
+- 토큰은 평문 HTTP로 오간다. 인터넷에 직접 열 때는 HTTPS(Cloudflare 터널은 기본 HTTPS)로
+
+**API** (JSON. 토큰을 켰으면 `-H "Authorization: Bearer <토큰>"`)
+```sh
+curl -X POST localhost:8090/api/jobs -d '{"type":"cache","src":"dataset/dog","size":512,"caption":"a photo of sks dog"}'
+curl -X POST localhost:8090/api/jobs -d '{"type":"train","data":"cache/dog_512","steps":500,"out":"out/dog.safetensors"}'
+curl -X POST localhost:8090/api/jobs -d '{"type":"generate","prompt":"a photo of sks dog on a sunny beach","lora":"out/dog.safetensors","width":768,"height":768}'
+curl localhost:8090/api/jobs                       # 목록 + 진행률 (step, steps, loss, sec_per_step, eta_sec)
+curl -X POST localhost:8090/api/jobs/3/cancel      # 대기 → 취소, 실행 중 → SIGTERM (10초 뒤 SIGKILL)
+curl -X POST localhost:8090/api/jobs/3/kill        # 실행 중 → 즉시 SIGKILL
+curl -X POST localhost:8090/api/jobs/remove-many -d '{"ids":[1,2],"delete_files":true}'   # 끝난 작업 + 그 결과 파일 삭제
+```
+| 엔드포인트 | 내용 |
+|---|---|
+| `POST /api/jobs` | `type`: `cache` (`src`, `dst`, `size` 512, `caption`, `prefix`, `vae_backend`:"cpu") / `train` (`data`, `out`, `name`, `steps` 200, `lr`, `rank`, `alpha`, `conv_rank`, `conv_alpha`, `seed`, `save_every`, `ckpt` true, `native` "all", `resume`, `model`, `fp16` true, `loss_scale`, `t_min`, `t_max`) / `generate` (`prompt`, `negative`, `lora`, `lora_weight` 1, `width`·`height` 1024 (64의 배수), `steps` 20, `cfg` 7, `seed` 42). 경로 존재는 **작업이 시작될 때** 검사 → 앞 작업이 만들 캐시·LoRA를 뒤 작업이 써도 된다 |
+| `GET /api/jobs`, `GET /api/jobs/<id>`, `GET /api/jobs/<id>/log` | 목록, 상세(로그 끝 60줄, 결과 파일), 전체 로그 |
+| `POST /api/jobs/<id>/cancel`, `/kill`, `/move` (`{"dir":"up"/"down"/"top"}`), `/remove` (`{"delete_files":bool}`) | 취소, 강제 종료, 대기 순서 바꾸기, 끝난 작업 지우기 |
+| `POST /api/jobs/remove-many` | `{"ids":[…], "delete_files":bool}`. 대기·실행 중인 작업은 건너뜀. 파일 삭제는 **그 작업이 만든 파일만** (LoRA와 `_s<스텝>` 중간 저장본, 생성 그림·로그, 캐시의 `.npy`·`.check.png`·`cache.dgl`·`captions.txt`). 원본 사진은 지우지 않음 |
+| `POST /api/queue/cancel-all` (`{"running":true,"force":true}` 선택), `/pause`, `/resume` | 대기 전부 취소, 큐 일시정지/재개 |
+| `GET /api/config`, `GET /api/list` | 서버 설정, 폼에서 고를 LoRA·캐시·이미지 폴더 목록 |
+| `GET /files/<경로>` | `--root` 안의 파일 받기 |
+| v0.3 호환: `POST /api/train`, `GET /api/status`, `POST /api/stop`, `GET /api/log` | `/api/train`은 이제 거절(409) 대신 큐에 넣는다 |
 
 ### 4. 결과 확인 (sd.cpp로 생성)
 ```sh
@@ -268,14 +334,16 @@ sd-cli에 직접 걸 때는 `--lora-model-dir out -p "...<lora:dog:1>" --lora-ap
 | `sdxl_lora --train <폴더> --grad-check` | 체크포인팅 기울기 = 전체 그래프 기울기 확인 (2번째 스텝에서 비교) |
 | `sdxl_lora --mem-plan <잠재값 한 변> [--ckpt] [--native all]` | GPU 없이 학습 그래프 메모리 계산 (64 = 512px, 128 = 1024px) |
 | `SDXL_NAN_DEBUG=1 sdxl_lora --train ... --steps N` | N번째 스텝에서 처음 비유한 값이 나오는 노드 찾기 (체크포인팅 없는 모드). **v0.3**: 역전파 노드까지 검사 |
+| `python3 tests/test_server.py build/sdxl_lora_server` | **v0.4** 작업 큐 서버 시험 56항목 (가짜 학습기·sd-cli로, GPU 불필요): 차례 실행, 순서 바꾸기, 취소·강제 종료와 자식 프로세스 정리, 재시작 복원, 경로 제한, 선택 삭제와 원본 보존, 토큰, 화면 끄기·직접 만든 프론트·CORS |
 | `tools/guard.sh <로그> <명령>` | iGPU용 메모리 감시: GTT + 시스템 used 합이 `GUARD_LIMIT_MIB`를 넘으면 명령 종료. **v0.2**: LXC 컨테이너 안에서는 used를 `free -m` 대신 cgroup `memory.stat`(anon+kernel+shmem)에서 읽음 (호스트 직접 실행은 그대로 `free`) — LXC(lxcfs)의 `free`는 GPU로 모델을 올리는 순간 수 GiB 거짓으로 튀어 멀쩡한 작업을 종료시켰음 (`verification/v0.2/logs/stage4_sdcpp_memory_spike_investigation.txt`) |
 
-## 알려진 제한 (v0.3)
+## 알려진 제한 (v0.4)
 - 배치 1, 정사각형 한 해상도 (비율 버킷 없음), UNet LoRA만 (텍스트 인코더 LoRA 없음). 트랜스포머 안의 proj_in/out·ff Linear는 대상 아님 (kohya 기본값은 포함)
 - 모듈별 rank/alpha는 두 묶음(어텐션·1x1·Linear / 3x3 합성곱)만. kohya `block_dims` 같은 블록별 rank 없음
 - fp16 행렬곱 학습(v0.3)은 1024px 어텐션 LoRA 200스텝, 256px LoCon 40스텝으로 검증. 가중치·활성값 저장은 그대로(가중치 f16, 활성값 f32)라 메모리는 f32 학습과 같다 — 빨라질 뿐 메모리는 안 줄어듦
 - 1024px 장시간 학습에서 스텝 시간이 약 15% 늘어나는 현상 (원인 미확정)
-- 학습 데이터 캐시와 결과 확인에 stable-diffusion.cpp `sd-cli`가 필요
+- 학습 데이터 캐시와 결과 확인에 stable-diffusion.cpp `sd-cli`가 필요 (서버의 캐시·생성 작업도 `--sd-cli`로 이것을 씀)
+- 서버는 한 번에 작업 하나 (GPU 메모리). 배치 생성은 작업 여러 개로(웹의 "장 수"가 seed를 1씩 늘려 여러 작업을 넣음). 사용자 계정 구분 없음(토큰 하나)
 - 검증한 GPU는 Radeon 660M (RADV) 하나
 
 ## 폴더
